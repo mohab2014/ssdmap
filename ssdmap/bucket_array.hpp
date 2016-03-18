@@ -56,6 +56,11 @@ public:
         {
             throw std::runtime_error("Invalid page size.");
         }
+        
+        if(bucket_size_ > (1ULL<<(8*sizeof(counter_type))))
+        {
+            throw std::runtime_error("Invalid bucket size.");
+        }
     };
     
     inline bucket_array(void* ptr, const size_t& page_size) :
@@ -66,6 +71,10 @@ public:
         if(bucket_size_*sizeof(value_type)+sizeof(counter_type) >  page_size_)
         {
             throw std::runtime_error("Invalid page size.");
+        }
+        if(bucket_size_ > (1ULL<<(8*sizeof(counter_type))))
+        {
+            throw std::runtime_error("Invalid bucket size.");
         }
     };
     
