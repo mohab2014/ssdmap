@@ -24,6 +24,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3152221F1C9C67810011729F /* bucket_array.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = bucket_array.hpp; sourceTree = "<group>"; };
 		31D08A481C9B1AC200B57FF7 /* ssdmap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ssdmap; sourceTree = BUILT_PRODUCTS_DIR; };
 		31D08A4B1C9B1AC200B57FF7 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		31D08A521C9B1AD600B57FF7 /* mmap_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmap_util.c; sourceTree = "<group>"; };
@@ -63,6 +64,7 @@
 				31D08A4B1C9B1AC200B57FF7 /* main.cpp */,
 				31D08A521C9B1AD600B57FF7 /* mmap_util.c */,
 				31D08A531C9B1AD600B57FF7 /* mmap_util.h */,
+				3152221F1C9C67810011729F /* bucket_array.hpp */,
 			);
 			path = ssdmap;
 			sourceTree = "<group>";
@@ -243,6 +245,7 @@
 				31D08A511C9B1AC200B57FF7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
