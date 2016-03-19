@@ -33,8 +33,15 @@ int main(int argc, const char * argv[]) {
     uint64_t* sub_array = ba.get_bucket_pointer(0);
     sub_array[0] = UINT64_C(0x12345678a1a2a3a4);
     
+    
     printf("array[0] = 0x%08x\n", array[0]);
 
+    auto bucket = ba.bucket(0);
+    bucket.set_size(1);
+    
+    for (auto it = bucket.begin(); it != bucket.end(); ++it) {
+        printf("val: 0x%08llx\n", *it);
+    }
     
     //    close_mmap(mmap);
     destroy_mmap(mmap);

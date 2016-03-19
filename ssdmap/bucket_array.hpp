@@ -40,6 +40,11 @@ public:
     typedef const T*                          const_pointer;
     typedef size_t                            size_type;
 
+    typedef value_type*                           iterator;
+    typedef const value_type*                     const_iterator;
+    typedef std::reverse_iterator<iterator>       reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
 
     typedef C                                 counter_type;
     typedef C&                                counter_ref;
@@ -48,6 +53,57 @@ public:
     typedef const C*                          const_counter_ptr;
 
 
+    class bucket
+    {
+    public:
+        bucket(unsigned char* ptr, size_type page_size): addr_(ptr), page_size_(page_size)
+        {}
+        
+        inline counter_type size() const
+        {
+            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + page_size_ - sizeof(counter_type));
+            
+            return c_ptr[0];
+        }
+        
+        inline void set_size(counter_type c)
+        {
+            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + page_size_ - sizeof(counter_type));
+            *c_ptr = c;
+        }
+        inline iterator begin()
+        {
+            return iterator(reinterpret_cast<pointer>(addr_));
+        }
+        
+        const_iterator begin() const
+        {
+            return const_iterator(reinterpret_cast<pointer>(addr_));
+        }
+
+        
+        inline iterator end()
+        {
+            return iterator(reinterpret_cast<pointer>(addr_) + size());
+        }
+        
+        const_iterator end() const
+        {
+            return const_iterator(reinterpret_cast<pointer>(addr_) + size());
+        }
+
+        reverse_iterator rbegin() {return reverse_iterator(end());}
+        const_reverse_iterator rbegin() const {return const_reverse_iterator(end());}
+        reverse_iterator rend() {return reverse_iterator(begin());}
+        const_reverse_iterator rend() const {return const_reverse_iterator(begin());}
+
+    private:
+        unsigned char* addr_;
+        const size_type page_size_;
+    };
+    
+    typedef bucket bucket_type;
+    
     inline bucket_array(void* ptr, const_counter_ref bucket_size, const size_t& page_size) :
     mem_(static_cast<unsigned char*>(ptr)), bucket_size_(bucket_size), page_size_(page_size)
     {
@@ -99,10 +155,10 @@ public:
         return reinterpret_cast<pointer>(mem_ + (n*page_size_));
     }
     
-    inline counter_type get_bucket_counter(size_type n) const
+    inline counter_type get_bucket_size(size_type n) const
     {
         if (n >= N) {
-            throw std::out_of_range("bucket_array::get_bucket_counter");
+            throw std::out_of_range("bucket_array::get_bucket_size");
         }
         
         counter_ptr c_ptr = reinterpret_cast<counter_ptr>(mem_ + ((n+1)*page_size_) - sizeof(counter_type));
@@ -110,7 +166,25 @@ public:
         return c_ptr[0];
     }
     
-    inline void prefetch_bucket(size_type n) const
+    inline bucket_type bucket(size_type n)
+    {
+        if (n >= N) {
+            throw std::out_of_range("bucket_array::bucket");
+        }
+        
+        return bucket_type(mem_ + (n*page_size_), page_size_);
+    }
+    
+    inline const bucket_type bucket(size_type n) const
+    {
+        if (n >= N) {
+            throw std::out_of_range("bucket_array::bucket");
+        }
+        
+        return bucket_type(mem_ + (n*page_size_), page_size_);
+    }
+    
+    inline void prefetch_bucket(size_type n)
     {
         if (n >= N) {
             throw std::out_of_range("bucket_array::prefetch_bucket");
