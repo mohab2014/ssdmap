@@ -39,6 +39,8 @@ int main(int argc, const char * argv[]) {
     auto bucket = ba.bucket(0);
     bucket.set_size(1);
     
+    bucket.append(UINT64_C(0xffffffffffffffff));
+    
     for (auto it = bucket.begin(); it != bucket.end(); ++it) {
         printf("val: 0x%08llx\n", *it);
     }

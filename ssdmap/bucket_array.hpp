@@ -56,19 +56,19 @@ public:
     class bucket
     {
     public:
-        bucket(unsigned char* ptr, size_type page_size): addr_(ptr), page_size_(page_size)
+        bucket(unsigned char* ptr, bucket_array* a): addr_(ptr), array_(a)
         {}
         
         inline counter_type size() const
         {
-            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + page_size_ - sizeof(counter_type));
+            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
             
             return c_ptr[0];
         }
         
         inline void set_size(counter_type c)
         {
-            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + page_size_ - sizeof(counter_type));
+            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
             *c_ptr = c;
         }
         inline iterator begin()
@@ -97,9 +97,39 @@ public:
         reverse_iterator rend() {return reverse_iterator(begin());}
         const_reverse_iterator rend() const {return const_reverse_iterator(begin());}
 
+        inline bool append(value_type v)
+        {
+            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
+
+            if (*c_ptr == array_->bucket_size()) {
+                return false;
+            }
+
+            value_type *ptr = reinterpret_cast<pointer>(addr_) + size();
+            *ptr = v;
+            *c_ptr = (*c_ptr) + 1;
+
+            return true;
+        }
+        
+        inline bool append(value_type &v)
+        {
+            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
+            
+            if (*c_ptr == array_->bucket_size()) {
+                return false;
+            }
+            
+            value_type *ptr = reinterpret_cast<pointer>(addr_) + size();
+            *ptr = v;
+            
+            *c_ptr++;
+            return true;
+        }
+        
     private:
         unsigned char* addr_;
-        const size_type page_size_;
+        bucket_array* array_;
     };
     
     typedef bucket bucket_type;
@@ -138,13 +168,18 @@ public:
     {
         return bucket_size_;
     }
+    
+    size_type page_size() const
+    {
+        return page_size_;
+    }
 
     inline pointer get_bucket_pointer(size_type n)
     {
         if (n >= N) {
             throw std::out_of_range("bucket_array::get_bucket_pointer");
         }
-        return reinterpret_cast<pointer>(mem_ + (n*page_size_));
+        return reinterpret_cast<pointer>(mem_ + (n*page_size()));
     }
 
     inline const_pointer get_bucket_pointer(size_type n) const
@@ -152,7 +187,7 @@ public:
         if (n >= N) {
             throw std::out_of_range("bucket_array::get_bucket_pointer");
         }
-        return reinterpret_cast<pointer>(mem_ + (n*page_size_));
+        return reinterpret_cast<pointer>(mem_ + (n*page_size()));
     }
     
     inline counter_type get_bucket_size(size_type n) const
@@ -161,7 +196,7 @@ public:
             throw std::out_of_range("bucket_array::get_bucket_size");
         }
         
-        counter_ptr c_ptr = reinterpret_cast<counter_ptr>(mem_ + ((n+1)*page_size_) - sizeof(counter_type));
+        counter_ptr c_ptr = reinterpret_cast<counter_ptr>(mem_ + ((n+1)*page_size()) - sizeof(counter_type));
         
         return c_ptr[0];
     }
@@ -172,7 +207,7 @@ public:
             throw std::out_of_range("bucket_array::bucket");
         }
         
-        return bucket_type(mem_ + (n*page_size_), page_size_);
+        return bucket_type(mem_ + (n*page_size()), this);
     }
     
     inline const bucket_type bucket(size_type n) const
@@ -181,7 +216,7 @@ public:
             throw std::out_of_range("bucket_array::bucket");
         }
         
-        return bucket_type(mem_ + (n*page_size_), page_size_);
+        return bucket_type(mem_ + (n*page_size()), this);
     }
     
     inline void prefetch_bucket(size_type n)
@@ -189,7 +224,7 @@ public:
         if (n >= N) {
             throw std::out_of_range("bucket_array::prefetch_bucket");
         }
-        void* ptr = mem_ + (n*page_size_);
+        void* ptr = mem_ + (n*page_size());
         if(madvise(ptr, page_size_, MADV_WILLNEED) == -1)
         {
             printf("Bad advice ...\n");
