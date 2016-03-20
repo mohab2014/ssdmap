@@ -41,11 +41,12 @@ private:
     
     uint8_t mask_size_;
     
+    size_t e_count_;
 public:
-    bucket_map(const hasher& hf = hasher(), const key_equal& eql = key_equal())
+    bucket_map(const hasher& hf = hasher(), const key_equal& eql = key_equal()) : e_count_(0)
     {
         
-        mask_size_ = 16; // first 16 bits
+        mask_size_ = 20; // first 16 bits
         size_t N = 1 << mask_size_;
         size_t page_size = 4096;
 
@@ -105,6 +106,12 @@ public:
         if (!success) {
             // add to the overflow bucket
             overflow_map_.insert(value);
+            
+            double load = ((double)e_count_)/(b_array_->bucket_size() * b_array_->bucket_count());
+                                         
+                           std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load << "), size of overflow bucket: " << overflow_map_.size() << std::endl;
         }
+        
+        e_count_++;
     }
 };

@@ -171,16 +171,22 @@ public:
         }
     };
     
-    counter_type bucket_size() const
+    inline counter_type bucket_size() const
     {
         return bucket_size_;
     }
     
-    size_type page_size() const
+    inline size_type page_size() const
     {
         return page_size_;
     }
 
+    inline size_type bucket_count() const
+    {
+        return N_;
+    }
+    
+    
     inline pointer get_bucket_pointer(size_type n)
     {
         if (n >= N_) {

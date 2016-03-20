@@ -15,8 +15,30 @@
 #include "bucket_array.hpp"
 #include "bucket_map.hpp"
 
+//static uint64_t x=123456789, y=362436069, z=521288629;
+
+//static uint64_t x=123456789, y=362436069, z=521288629, w=314159;
+static uint64_t x, y, z, w;
+uint64_t xorshift128(void) {
+    uint64_t t = x;
+    t ^= t << 11;
+    t ^= t >> 8;
+    x = y; y = z; z = w;
+    w ^= w >> 19;
+    w ^= t;
+    return w;
+}
+
 int main(int argc, const char * argv[]) {
 
+    srand (time(NULL));
+    x = rand();
+    y = rand();
+    z = rand();
+    w = rand();
+    
+    remove("bucket_map.bin");
+    
 //    size_t length = 10  * 1024; // 10 kB
 //    
 //    mmap_st mmap = create_mmap("map.bin",length);
@@ -54,20 +76,15 @@ int main(int argc, const char * argv[]) {
     
     bucket_map<uint64_t,uint64_t> bm;
     
-    bm.add(0, 0);
-    bm.add(1, 1);
-    bm.add(2, 1);
-    bm.add(3, 1);
+    size_t MAX_REP = 1 << 24;
     
-    uint64_t v = -1;
-
-    bm.get(3, v);
-    printf("map[1] = 0x%08llu\n", v);
-
-    bool r = bm.get(4,v);
-    if (!r) {
-        printf("4 was not mapped\n");
+    for (size_t i = 0; i < MAX_REP; i++) {
+        uint64_t k = xorshift128();
+        bm.add(k, 0);
+//        std::cout << "Added\n";
     }
+    
+    std::cout << "Done ...\n";
     
     return 0;
 }
