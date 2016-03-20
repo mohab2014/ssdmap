@@ -17,6 +17,8 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 
+#include <errno.h>
+
 mmap_st create_mmap(const char *pathname, size_t length)
 {
     off_t result;
@@ -83,6 +85,7 @@ int close_mmap(mmap_st map)
 
     if (ret == -1) {
         perror("Error syncing the map.");
+
         exit(EXIT_FAILURE);
     }
     

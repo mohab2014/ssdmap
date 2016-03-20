@@ -30,7 +30,7 @@
   sizeof(T)															 		 sizeof(C)
  */
 
-template <class T, size_t N, class C = uint16_t>
+template <class T, class C = uint16_t>
 class bucket_array {
 public:
     typedef T                                 value_type;
@@ -97,7 +97,7 @@ public:
         reverse_iterator rend() {return reverse_iterator(begin());}
         const_reverse_iterator rend() const {return const_reverse_iterator(begin());}
 
-        inline bool append(value_type v)
+        inline bool append(const value_type v)
         {
             counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
 
@@ -112,21 +112,28 @@ public:
             return true;
         }
         
-        inline bool append(value_type &v)
-        {
-            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
-            
-            if (*c_ptr == array_->bucket_size()) {
-                return false;
-            }
-            
-            value_type *ptr = reinterpret_cast<pointer>(addr_) + size();
-            *ptr = v;
-            
-            *c_ptr++;
-            return true;
-        }
+//        inline bool append(value_type &v)
+//        {
+//            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
+//            
+//            if (*c_ptr == array_->bucket_size()) {
+//                return false;
+//            }
+//            
+//            value_type *ptr = reinterpret_cast<pointer>(addr_) + size();
+//            *ptr = v;
+//            
+//            *c_ptr++;
+//            return true;
+//        }
         
+        inline void prefetch() const
+        {
+            if(madvise(addr_, array_->page_size(), MADV_WILLNEED) == -1)
+            {
+                printf("Bad advice ...\n");
+            }
+        }
     private:
         unsigned char* addr_;
         bucket_array* array_;
@@ -134,8 +141,8 @@ public:
     
     typedef bucket bucket_type;
     
-    inline bucket_array(void* ptr, const_counter_ref bucket_size, const size_t& page_size) :
-    mem_(static_cast<unsigned char*>(ptr)), bucket_size_(bucket_size), page_size_(page_size)
+    inline bucket_array(void* ptr, const size_type N, const_counter_ref bucket_size, const size_t& page_size) :
+    mem_(static_cast<unsigned char*>(ptr)), N_(N), bucket_size_(bucket_size), page_size_(page_size)
     {
         // check that the page can contain bucket_size_ elements plus a counter
         if(bucket_size_*sizeof(value_type)+sizeof(counter_type) >  page_size_)
@@ -149,8 +156,8 @@ public:
         }
     };
     
-    inline bucket_array(void* ptr, const size_t& page_size) :
-    mem_(static_cast<unsigned char*>(ptr)), bucket_size_((page_size - sizeof(counter_type))/sizeof(value_type)), page_size_(page_size)
+    inline bucket_array(void* ptr, const size_type N, const size_t& page_size) :
+    mem_(static_cast<unsigned char*>(ptr)), N_(N), bucket_size_((page_size - sizeof(counter_type))/sizeof(value_type)), page_size_(page_size)
     {
         
         // check that the page can contain bucket_size_ elements plus a counter
@@ -176,7 +183,7 @@ public:
 
     inline pointer get_bucket_pointer(size_type n)
     {
-        if (n >= N) {
+        if (n >= N_) {
             throw std::out_of_range("bucket_array::get_bucket_pointer");
         }
         return reinterpret_cast<pointer>(mem_ + (n*page_size()));
@@ -184,7 +191,7 @@ public:
 
     inline const_pointer get_bucket_pointer(size_type n) const
     {
-        if (n >= N) {
+        if (n >= N_) {
             throw std::out_of_range("bucket_array::get_bucket_pointer");
         }
         return reinterpret_cast<pointer>(mem_ + (n*page_size()));
@@ -192,7 +199,7 @@ public:
     
     inline counter_type get_bucket_size(size_type n) const
     {
-        if (n >= N) {
+        if (n >= N_) {
             throw std::out_of_range("bucket_array::get_bucket_size");
         }
         
@@ -203,7 +210,7 @@ public:
     
     inline bucket_type bucket(size_type n)
     {
-        if (n >= N) {
+        if (n >= N_) {
             throw std::out_of_range("bucket_array::bucket");
         }
         
@@ -212,7 +219,7 @@ public:
     
     inline const bucket_type bucket(size_type n) const
     {
-        if (n >= N) {
+        if (n >= N_) {
             throw std::out_of_range("bucket_array::bucket");
         }
         
@@ -221,7 +228,7 @@ public:
     
     inline void prefetch_bucket(size_type n)
     {
-        if (n >= N) {
+        if (n >= N_) {
             throw std::out_of_range("bucket_array::prefetch_bucket");
         }
         void* ptr = mem_ + (n*page_size());
@@ -233,6 +240,7 @@ public:
 
     
 private:
+    const size_type N_;
     unsigned char* mem_;
     const counter_type bucket_size_;
     const size_type page_size_;

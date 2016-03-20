@@ -29,6 +29,7 @@
 		31D08A4B1C9B1AC200B57FF7 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		31D08A521C9B1AD600B57FF7 /* mmap_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmap_util.c; sourceTree = "<group>"; };
 		31D08A531C9B1AD600B57FF7 /* mmap_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mmap_util.h; sourceTree = "<group>"; };
+		31D68DA21C9F417B008B511D /* bucket_map.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bucket_map.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +66,7 @@
 				31D08A521C9B1AD600B57FF7 /* mmap_util.c */,
 				31D08A531C9B1AD600B57FF7 /* mmap_util.h */,
 				3152221F1C9C67810011729F /* bucket_array.hpp */,
+				31D68DA21C9F417B008B511D /* bucket_map.hpp */,
 			);
 			path = ssdmap;
 			sourceTree = "<group>";
