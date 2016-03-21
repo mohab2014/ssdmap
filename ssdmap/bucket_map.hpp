@@ -13,7 +13,10 @@
 
 #include <utility>
 #include <unordered_map>
+#include <map>
 #include <vector>
+#include <list>
+
 #include <cmath>
 #include <string>
 #include <sstream>
@@ -34,7 +37,8 @@ uint8_t log2llu(size_t x)
 }
 
 constexpr float kBucketMapResizeThresholdLoad = 0.85;
-constexpr size_t kBucketMapResizeThresholdOverflow = 1e5;
+constexpr size_t kBucketMapResizeMaxOverflowSize = 1e5; // no more than 1e5 elements in the overflow bucket
+constexpr float kBucketMapResizeMaxOverflowRatio = 0.1; // no more than 10% of elements in the overflow bucket
 constexpr size_t kBucketMapResizeStepIterations = 4;
 
 constexpr size_t kPageSize = 4096;
@@ -59,7 +63,8 @@ public:
 
     
 private:
-    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
+//    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
+    std::map<size_t, std::map<size_t,mapped_type>> overflow_map_;
     
     std::vector<std::pair<bucket_array_type, mmap_st> > bucket_arrays_;
     
@@ -73,6 +78,7 @@ private:
     // to compute load
     size_t e_count_;
     size_t bucket_space_;
+    size_t overflow_count_;
     
     // resize management
     bool is_resizing_;
@@ -81,7 +87,7 @@ private:
 public:
     
     bucket_map(const size_type setup_size, const hasher& hf = hasher(), const key_equal& eql = key_equal())
-    : e_count_(0), bucket_arrays_(), is_resizing_(false)
+    : e_count_(0), overflow_count_(0), bucket_arrays_(), is_resizing_(false)
     {
 
         
@@ -138,7 +144,7 @@ public:
                 // otherwise, we know that the bucket is in the last array
                 
                 if ((h & ((1 << mask_size_))) != 0) {
-                    return std::make_pair(mask_size_+1, (h & ((1 << mask_size_)-1)));
+                    return std::make_pair(mask_size_- original_mask_size_+1, (h & ((1 << mask_size_)-1)));
                 }
             }
         }
@@ -158,15 +164,19 @@ public:
     
     bool get(key_type key, mapped_type& v, const hasher& hf = hasher(), const key_equal& eql = key_equal())
     {
+        size_t h = hf(key);
+
         // first, look if it is not in the overflow map
-        auto ob_it = overflow_map_.find(key);
-        if (ob_it != overflow_map_.end()) {
-            v = ob_it->second;
+//        auto ob_it = overflow_map_.find(key);
+//        if (ob_it != overflow_map_.end()) {
+//            v = ob_it->second;
+//            return true;
+//        }
+        if (get_overflow_bucket(h, v)) {
             return true;
         }
         
         // otherwise, get the bucket index
-        size_t h = hf(key);
         
         // get the appropriate coordinates
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
@@ -189,26 +199,30 @@ public:
     
     void add(key_type key, const mapped_type& v, const hasher& hf = hasher())
     {
-        value_type value(key,v);
+//        value_type value(key,v);
+        
         // get the bucket index
         size_t h = hf(key);
-        h &= (1 << mask_size_)-1;
+//        h &= (1 << mask_size_)-1;
 
         // get the appropriate coordinates
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
 
+        assert(coords.first < bucket_arrays_.size());
         // try to append the value to the bucket
         auto bucket = bucket_arrays_[coords.first].first.bucket(coords.second);
-        bool success = bucket.append(value);
+        
+//        bool success = bucket.append(value);
+        bool success = bucket.append(std::make_pair(key, v));
         
         if (!success) {
             // add to the overflow bucket
-            overflow_map_.insert(value);
-            
+//            overflow_map_.insert(value);
+            append_overflow_bucket(h, v);
 //            double load = ((double)e_count_)/(bucket_space_);
-            double over_prop = ((double)overflow_map_.size())/(e_count_);
+            double over_prop = ((double)overflow_count_)/(e_count_);
             
-            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_map_.size() << ", overflow proportion: " << over_prop << std::endl;
+            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_count_ << ", overflow proportion: " << over_prop << std::endl;
         }
         
         e_count_++;
@@ -223,6 +237,39 @@ public:
 
     }
     
+    bool get_overflow_bucket(size_t hkey, mapped_type& v) const
+    {
+        
+        auto const it = overflow_map_.find(hkey&((1 << mask_size_)-1));
+        
+        if (it != overflow_map_.end()) {
+            auto const map_it = it->second.find(hkey);
+            
+            if (map_it != it->second.end()) {
+                v = map_it->second;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    void append_overflow_bucket(size_t hkey, const mapped_type& v)
+    {
+        auto const it = overflow_map_.find(hkey&((1 << mask_size_)-1));
+
+        if (it != overflow_map_.end()) {
+            it->second[hkey] = v;
+        }else{
+            std::map<size_t, mapped_type> m;
+            m[hkey] = v;
+            
+            overflow_map_[hkey&((1 << mask_size_)-1)] = m; // move ????
+        }
+        
+        overflow_count_++;
+    }
+    
     inline float load() const
     {
         return ((float)e_count_)/(bucket_space_);
@@ -231,12 +278,16 @@ public:
     inline bool should_resize() const
     {
         // return yes if the map should be resized to reduce the load and/or the size of the overflow bucket
-        if(e_count_ > kBucketMapResizeThresholdLoad*bucket_space_ && overflow_map_.size() >= kBucketMapResizeThresholdOverflow)
+        if(e_count_ > kBucketMapResizeThresholdLoad*bucket_space_ )
         {
-            return true;
+            if (overflow_count_ >= kBucketMapResizeMaxOverflowSize) {
+                return true;
+            }else if (overflow_count_ >= kBucketMapResizeMaxOverflowRatio * e_count_){
+                return true;
+            }
         }
         
-        if(overflow_map_.size() >= 10*kBucketMapResizeThresholdOverflow)
+        if(overflow_count_ >= 10*kBucketMapResizeMaxOverflowSize)
         {
             return true;
         }
@@ -248,6 +299,9 @@ public:
     void start_resize()
     {
         assert(!is_resizing_);
+        
+        std::cout << "Start resizing!" << std::endl;
+        
         // create a new bucket_array of double the size of the previous one
         
         size_t ba_count = bucket_arrays_.size();
@@ -272,6 +326,9 @@ public:
         mask_size_++;
         resize_counter_ = 0;
         is_resizing_ = false;
+        
+        std::cout << "Done resizing!" << std::endl;
+
     }
     
     void online_resize()
