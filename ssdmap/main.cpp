@@ -37,7 +37,8 @@ int main(int argc, const char * argv[]) {
     z = rand();
     w = rand();
     
-    remove("bucket_map.bin");
+    remove("bucket_map_0.bin");
+    remove("bucket_map_1.bin");
     
 //    size_t length = 10  * 1024; // 10 kB
 //    
@@ -74,16 +75,30 @@ int main(int argc, const char * argv[]) {
 //    
     
     
-    bucket_map<uint64_t,uint64_t> bm;
+    bucket_map<uint64_t,uint64_t> bm(1 << 16);
+
+    bm.add(0, 0);
+    bm.add(1, 1);
+    bm.add(2, 2);
+    bm.add((1<<16)+100, 16);
+    
+    uint64_t v;
+    
+    bm.get(1, v);
+    
+    printf("map[1] = 0x%08llu\n", v);
+
+    bm.get((1<<16)+100, v);
+    printf("map[(1<<16)+100] = 0x%08llu\n", v);
     
     size_t MAX_REP = 1 << 24;
     
-    for (size_t i = 0; i < MAX_REP; i++) {
-        uint64_t k = xorshift128();
-        bm.add(k, 0);
-//        std::cout << "Added\n";
-    }
-    
+//    for (size_t i = 0; i < MAX_REP; i++) {
+//        uint64_t k = xorshift128();
+//        bm.add(k, 0);
+////        std::cout << "Added\n";
+//    }
+//    
     std::cout << "Done ...\n";
     
     return 0;

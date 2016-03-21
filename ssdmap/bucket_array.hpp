@@ -141,6 +141,11 @@ public:
     
     typedef bucket bucket_type;
     
+    inline static size_t optimal_bucket_size(const size_t page_size)
+    {
+        return (page_size - sizeof(counter_type))/sizeof(value_type);
+    }
+
     inline bucket_array(void* ptr, const size_type N, const_counter_ref bucket_size, const size_t& page_size) :
     mem_(static_cast<unsigned char*>(ptr)), N_(N), bucket_size_(bucket_size), page_size_(page_size)
     {
