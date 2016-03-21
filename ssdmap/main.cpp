@@ -39,6 +39,7 @@ int main(int argc, const char * argv[]) {
     
     remove("bucket_map.bin.0");
     remove("bucket_map.bin.1");
+    remove("bucket_map.bin.2");
     
 //    size_t length = 10  * 1024; // 10 kB
 //    

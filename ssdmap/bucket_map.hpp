@@ -64,7 +64,7 @@ public:
     
 private:
 //    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
-    std::map<size_t, std::map<size_t,mapped_type>> overflow_map_;
+    std::map<size_t, std::map<size_t,value_type>> overflow_map_;
     
     std::vector<std::pair<bucket_array_type, mmap_st> > bucket_arrays_;
     
@@ -199,7 +199,7 @@ public:
     
     void add(key_type key, const mapped_type& v, const hasher& hf = hasher())
     {
-//        value_type value(key,v);
+        value_type value(key,v);
         
         // get the bucket index
         size_t h = hf(key);
@@ -218,11 +218,11 @@ public:
         if (!success) {
             // add to the overflow bucket
 //            overflow_map_.insert(value);
-            append_overflow_bucket(h, v);
+            append_overflow_bucket(h, value);
 //            double load = ((double)e_count_)/(bucket_space_);
             double over_prop = ((double)overflow_count_)/(e_count_);
             
-            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_count_ << ", overflow proportion: " << over_prop << std::endl;
+            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_count_ << ", overflow proportion: " << over_prop << "\n" << std::endl;
         }
         
         e_count_++;
@@ -254,20 +254,30 @@ public:
         return false;
     }
     
-    void append_overflow_bucket(size_t hkey, const mapped_type& v)
+    void append_overflow_bucket(size_t bucket_index, size_t hkey, const value_type& v)
     {
-        auto const it = overflow_map_.find(hkey&((1 << mask_size_)-1));
-
+        auto const it = overflow_map_.find(bucket_index);
+        
         if (it != overflow_map_.end()) {
-            it->second[hkey] = v;
+//            it->second[hkey] = v;
+            it->second.insert(std::make_pair(hkey, v));
         }else{
-            std::map<size_t, mapped_type> m;
-            m[hkey] = v;
+            std::map<size_t, value_type> m;
+//            m[hkey] = v;
+            m.insert(std::make_pair(hkey, v));
             
-            overflow_map_[hkey&((1 << mask_size_)-1)] = m; // move ????
+//            overflow_map_[hkey&((1 << mask_size_)-1)] = m;
+            overflow_map_.insert(std::make_pair( hkey&((1 << mask_size_)-1) , m)); // move ????
+
         }
         
         overflow_count_++;
+    }
+
+    void append_overflow_bucket(size_t hkey, const value_type& v)
+    {
+        size_t index = hkey&((1 << mask_size_)-1);
+        append_overflow_bucket(index, hkey, v);
     }
     
     inline float load() const
@@ -315,7 +325,7 @@ public:
         
         mmap_st mmap = create_mmap(string_stream.str().data(),length);
         bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
-        bucket_space_ += bucket_arrays_[ba_count].first.bucket_size() * bucket_arrays_[ba_count].first.bucket_count();
+//        bucket_space_ += bucket_arrays_[ba_count].first.bucket_size() * bucket_arrays_[ba_count].first.bucket_count();
 
         resize_counter_ = 0;
         is_resizing_ = true;
@@ -367,7 +377,11 @@ public:
                 bool success = new_bucket.append(*it);
                 
                 if (!success) {
-                    printf("PROBLEM!\n");
+                    // append the pair to the overflow bucket
+                    size_t h = it->first;
+
+                    append_overflow_bucket(h&((1 << (mask_size_+1))-1), h, *it);
+//                    printf("PROBLEM!\n");
                 }
             }
         }
@@ -375,11 +389,46 @@ public:
         b.set_size(c_old);
         
         
+        // now, try to put as many elements from the overflow bucket as possible
+        auto const bucket_it = overflow_map_.find(resize_counter_);
+        
+        bool success;
+        
+        if (bucket_it != overflow_map_.end()) {
+            // initialize the current bucket
+            std::map<size_t,value_type> current_of_bucket(std::move(bucket_it->second));
+            
+            // erase the old value
+            overflow_map_.erase(resize_counter_);
+            
+            overflow_count_ -= current_of_bucket.size();
+            
+            // enumerate the bucket's content and try to append the values to the buckets
+            for (auto &elt: current_of_bucket) {
+                if (((elt.first) & mask) == 0) { // high order bit of the key is 0
+                    success = b.append(elt.second);
+                    if (!success) { // add the overflow bucket
+                        append_overflow_bucket(resize_counter_, elt.first, elt.second);
+                    }
+               }else{
+                    success = new_bucket.append(elt.second);
+                   if (!success) { // add the overflow bucket
+                       append_overflow_bucket(mask ^ resize_counter_, elt.first, elt.second);
+                   }
+                }
+                
+            }
+
+        }
+
+        
         // check if we are done
         if (resize_counter_ == ((mask<<1) -1)) {
             finalize_resize();
         }else{
             resize_counter_ ++;
         }
+        
+        bucket_space_ += bucket_arrays_.back().first.bucket_size();
     }
 };
