@@ -15,6 +15,9 @@
 #include <unordered_map>
 #include <vector>
 #include <cmath>
+#include <string>
+#include <sstream>
+#include <cassert>
 
 uint8_t log2llu(size_t x)
 {
@@ -32,6 +35,9 @@ uint8_t log2llu(size_t x)
 
 constexpr float kBucketMapResizeThresholdLoad = 0.85;
 constexpr size_t kBucketMapResizeThresholdOverflow = 1e5;
+constexpr size_t kBucketMapResizeStepIterations = 4;
+
+constexpr size_t kPageSize = 4096;
 
 template <class Key, class T, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>>
 class bucket_map {
@@ -61,6 +67,9 @@ private:
     uint8_t mask_size_;
     uint8_t original_mask_size_;
     
+    // where to store the files
+    std::string base_filename_;
+    
     // to compute load
     size_t e_count_;
     size_t bucket_space_;
@@ -74,32 +83,37 @@ public:
     bucket_map(const size_type setup_size, const hasher& hf = hasher(), const key_equal& eql = key_equal())
     : e_count_(0), bucket_arrays_(), is_resizing_(false)
     {
-        size_t page_size = 4096;
 
         
-        size_t b_size = bucket_array_type::optimal_bucket_size(page_size);
+        size_t b_size = bucket_array_type::optimal_bucket_size(kPageSize);
         float target_load = 0.75;
         
         original_mask_size_ = ceilf(log2f(setup_size/(target_load*b_size)));
         
-        mask_size_ = original_mask_size_+1;
+//        mask_size_ = original_mask_size_+1;
+        mask_size_ = original_mask_size_;
         
-        size_t N = 1 << original_mask_size_;
+        size_t N = 1 << mask_size_;
 
-        size_t length = N  * page_size;
-
-        mmap_st mmap = create_mmap("bucket_map_0.bin",length);
+        size_t length = N  * kPageSize;
         
-        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, page_size), mmap));
+        base_filename_ = "bucket_map.bin";
+        
+        std::ostringstream string_stream;
+        string_stream << base_filename_ << "." << std::dec << 0;
+        
+        mmap_st mmap = create_mmap(string_stream.str().data(),length);
+        
+        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
         bucket_space_ = bucket_arrays_[0].first.bucket_size() * bucket_arrays_[0].first.bucket_count();
 
-        N = 1 << mask_size_;
-        length = N  * page_size;
-        
-        mmap = create_mmap("bucket_map_1.bin",length);
-        
-        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, page_size), mmap));
-        bucket_space_ += bucket_arrays_[1].first.bucket_size() * bucket_arrays_[1].first.bucket_count();
+//        N = 1 << mask_size_;
+//        length = N  * kPageSize;
+//        
+//        mmap = create_mmap("bucket_map_1.bin",length);
+//        
+//        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
+//        bucket_space_ += bucket_arrays_[1].first.bucket_size() * bucket_arrays_[1].first.bucket_count();
 
     }
     
@@ -112,6 +126,24 @@ public:
     
     inline std::pair<uint8_t, size_t> bucket_coordinates(size_t h) const
     {
+        if (is_resizing_) {
+            // we must be careful here
+            // the coordinates depend on the value of resize_counter_
+            // if h & (1 << mask_size_)-1 is less than resize_counter_, it means that the
+            // bucket, before rebuild, was splitted
+            // otherwise, do as before
+            
+            if ((h & ((1 << mask_size_)-1)) < resize_counter_) {
+                // if the mask_size_-th bit is 0, do as before,
+                // otherwise, we know that the bucket is in the last array
+                
+                if ((h & ((1 << mask_size_))) != 0) {
+                    return std::make_pair(mask_size_+1, (h & ((1 << mask_size_)-1)));
+                }
+            }
+        }
+        h &= (1 << mask_size_)-1;
+
         uint8_t c = mask_size_-1;
         size_t mask = (1 << c);
         
@@ -135,7 +167,6 @@ public:
         
         // otherwise, get the bucket index
         size_t h = hf(key);
-        h &= (1 << mask_size_)-1;
         
         // get the appropriate coordinates
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
@@ -183,11 +214,10 @@ public:
         e_count_++;
         
         if (is_resizing_) {
-        
+            online_resize();
         }else{
             if (should_resize()) {
-                resize_counter_ = 0;
-                is_resizing_ = true;
+                start_resize();
             }
         }
 
@@ -215,8 +245,84 @@ public:
         return false;
     }
     
+    void start_resize()
+    {
+        assert(!is_resizing_);
+        // create a new bucket_array of double the size of the previous one
+        
+        size_t ba_count = bucket_arrays_.size();
+        
+        size_t N = 1 << (mask_size_ + 1);
+        
+        size_t length = N  * kPageSize;
+        
+        std::ostringstream string_stream;
+        string_stream << base_filename_ << "." << std::dec << ba_count;
+        
+        mmap_st mmap = create_mmap(string_stream.str().data(),length);
+        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
+        bucket_space_ += bucket_arrays_[ba_count].first.bucket_size() * bucket_arrays_[ba_count].first.bucket_count();
+
+        resize_counter_ = 0;
+        is_resizing_ = true;
+    }
+    
+    void finalize_resize()
+    {
+        mask_size_++;
+        resize_counter_ = 0;
+        is_resizing_ = false;
+    }
+    
+    void online_resize()
+    {
+        for (size_t i = 0; i < kBucketMapResizeStepIterations && is_resizing_; i++) {
+            resize_step();
+        }
+    }
     void resize_step()
     {
         // read a bucket and rewrite some of its content somewhere else
+        
+//        // get the one but last bucket array
+//        size_t ba_count = bucket_arrays_.size();
+//        bucket_array_type ba = bucket_arrays_[ba_count-2];
+        
+        // get the bucket pointed by resize_counter_
+        std::pair<uint8_t, size_t> coords = bucket_coordinates(resize_counter_);
+        auto b = bucket_arrays_[coords.first].first.bucket(coords.second);
+        
+
+        size_t mask = (1 << mask_size_);
+        auto new_bucket = bucket_arrays_.back().first.bucket(resize_counter_);
+        
+        size_t c_old = 0;
+        auto it_old = b.begin();
+        
+        for (auto it = b.begin(); it != b.end(); ++it) {
+            if (((it->first) & mask) == 0) { // high order bit of the key is 0
+                // keep it here
+                *it_old = *it;
+                ++it_old;
+                c_old++;
+            }else{
+                // append it to the other bucket
+                bool success = new_bucket.append(*it);
+                
+                if (!success) {
+                    printf("PROBLEM!\n");
+                }
+            }
+        }
+        // set the new size of the old bucket
+        b.set_size(c_old);
+        
+        
+        // check if we are done
+        if (resize_counter_ == ((mask<<1) -1)) {
+            finalize_resize();
+        }else{
+            resize_counter_ ++;
+        }
     }
 };

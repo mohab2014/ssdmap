@@ -58,7 +58,7 @@ public:
     public:
         bucket(unsigned char* ptr, bucket_array* a): addr_(ptr), array_(a)
         {}
-        
+                
         inline counter_type size() const
         {
             counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
