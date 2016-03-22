@@ -147,13 +147,13 @@ public:
             // if h & (1 << mask_size_)-1 is less than resize_counter_, it means that the
             // bucket, before rebuild, was splitted
             // otherwise, do as before
-            
-            if ((h & ((1 << mask_size_)-1)) < resize_counter_) {
+            size_t masked_h = (h & ((1 << mask_size_)-1));
+            if (masked_h < resize_counter_) {
                 // if the mask_size_-th bit is 0, do as before,
                 // otherwise, we know that the bucket is in the last array
                 
                 if ((h & ((1 << mask_size_))) != 0) {
-                    return std::make_pair(mask_size_- original_mask_size_+1, (h & ((1 << mask_size_)-1)));
+                    return std::make_pair(mask_size_- original_mask_size_+1, masked_h);
                 }
             }
         }
@@ -228,10 +228,11 @@ public:
             // add to the overflow bucket
 //            overflow_map_.insert(value);
             append_overflow_bucket(h, value);
-//            double load = ((double)e_count_)/(bucket_space_);
-            double over_prop = ((double)overflow_count_)/(e_count_);
             
-            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_count_ << ", overflow proportion: " << over_prop << "\n" << std::endl;
+//            double load = ((double)e_count_)/(bucket_space_);
+//            double over_prop = ((double)overflow_count_)/(e_count_);
+            
+//            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_count_ << ", overflow proportion: " << over_prop << "\n" << std::endl;
         }
         
         e_count_++;
@@ -384,6 +385,7 @@ public:
 
         size_t mask = (1 << mask_size_);
         auto new_bucket = bucket_arrays_.back().first.bucket(resize_counter_);
+        new_bucket.set_size(0);
         
         size_t c_old = 0;
         auto it_old = b.begin();

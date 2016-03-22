@@ -33,14 +33,25 @@ uint64_t xorshift128(void) {
 int main(int argc, const char * argv[]) {
 
     srand (time(NULL));
-//    x = rand();
-//    y = rand();
-//    z = rand();
-//    w = rand();
+    x = rand();
+    y = rand();
+    z = rand();
+    w = rand();
     
     remove("bucket_map.bin.0");
     remove("bucket_map.bin.1");
     remove("bucket_map.bin.2");
+    remove("bucket_map.bin.3");
+    remove("bucket_map.bin.4");
+    remove("bucket_map.bin.5");
+    remove("bucket_map.bin.6");
+    remove("bucket_map.bin.7");
+    remove("bucket_map.bin.8");
+    remove("bucket_map.bin.9");
+    remove("bucket_map.bin.10");
+    remove("bucket_map.bin.11");
+    remove("bucket_map.bin.12");
+    remove("bucket_map.bin.13");
     
 //    size_t length = 10  * 1024; // 10 kB
 //    
@@ -95,7 +106,8 @@ int main(int argc, const char * argv[]) {
 //    printf("map[(1<<16)+100] = 0x%08llu\n", v);
     
 //    size_t MAX_REP = 20;
-    size_t MAX_REP = 4535;
+//    size_t MAX_REP = 1e6;
+    size_t MAX_REP = 1 << 23;
     
     for (size_t i = 0; i < MAX_REP; i++) {
         uint64_t k = xorshift128();
@@ -103,6 +115,18 @@ int main(int argc, const char * argv[]) {
         bm.add(k, k);
         ref_map[k] = k;
 //        std::cout << "Added\n";
+        
+        
+//        for(auto &x : ref_map)
+//        {
+//            uint64_t v;
+//            bool s = bm.get(x.first, v);
+//            
+//            assert(s);
+//            assert(v == x.second);
+//            
+//        }
+
     }
     
     std::cout << "Done ...\n";
@@ -120,10 +144,10 @@ int main(int argc, const char * argv[]) {
     // 2580465799119907660
 
 //    uint64_t v;
-//    bool s = bm.get(4, v);
+//    bool s = bm.get(16, v);
 //    assert(s);
-//    assert(v == 4);
-//    
+//    assert(v == 16);
+    
 
     size_t count = 0;
     for(auto &x : ref_map)
