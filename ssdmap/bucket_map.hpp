@@ -93,13 +93,22 @@ public:
         
         size_t b_size = bucket_array_type::optimal_bucket_size(kPageSize);
         float target_load = 0.75;
+        size_t N;
         
-        original_mask_size_ = ceilf(log2f(setup_size/(target_load*b_size)));
+        if(target_load*b_size >= setup_size)
+        {
+            original_mask_size_ = 1;
+        }else{
+            float f =setup_size/(target_load*b_size);
+            original_mask_size_ = ceilf(log2f(f));
         
 //        mask_size_ = original_mask_size_+1;
-        mask_size_ = original_mask_size_;
+//        mask_size_ = original_mask_size_;
         
-        size_t N = 1 << mask_size_;
+        }
+        
+        mask_size_ = original_mask_size_;
+        N = 1 << mask_size_;
 
         size_t length = N  * kPageSize;
         
@@ -246,7 +255,7 @@ public:
             auto const map_it = it->second.find(hkey);
             
             if (map_it != it->second.end()) {
-                v = map_it->second;
+                v = map_it->second.second;
                 return true;
             }
         }
@@ -316,7 +325,7 @@ public:
         
         size_t ba_count = bucket_arrays_.size();
         
-        size_t N = 1 << (mask_size_ + 1);
+        size_t N = 1 << (mask_size_);
         
         size_t length = N  * kPageSize;
         
@@ -347,6 +356,19 @@ public:
             resize_step();
         }
     }
+    
+    void full_resize()
+    {
+        if(!is_resizing_)
+        {
+            start_resize();
+        }
+        
+        for (; is_resizing_; ) {
+            resize_step();
+        }
+    }
+    
     void resize_step()
     {
         // read a bucket and rewrite some of its content somewhere else
@@ -423,7 +445,7 @@ public:
 
         
         // check if we are done
-        if (resize_counter_ == ((mask<<1) -1)) {
+        if (resize_counter_ == (mask -1)) {
             finalize_resize();
         }else{
             resize_counter_ ++;

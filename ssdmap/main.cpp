@@ -17,8 +17,9 @@
 
 //static uint64_t x=123456789, y=362436069, z=521288629;
 
-//static uint64_t x=123456789, y=362436069, z=521288629, w=314159;
-static uint64_t x, y, z, w;
+static uint64_t x=123456789, y=362436069, z=521288629, w=314159;
+//static uint64_t x, y, z, w;
+
 uint64_t xorshift128(void) {
     uint64_t t = x;
     t ^= t << 11;
@@ -32,10 +33,10 @@ uint64_t xorshift128(void) {
 int main(int argc, const char * argv[]) {
 
     srand (time(NULL));
-    x = rand();
-    y = rand();
-    z = rand();
-    w = rand();
+//    x = rand();
+//    y = rand();
+//    z = rand();
+//    w = rand();
     
     remove("bucket_map.bin.0");
     remove("bucket_map.bin.1");
@@ -76,7 +77,8 @@ int main(int argc, const char * argv[]) {
 //    
     
     
-    bucket_map<uint64_t,uint64_t> bm(1 << 16);
+    bucket_map<uint64_t,uint64_t> bm(700); // 700 => 4 buckets
+    std::map<uint64_t, uint64_t> ref_map;
 //
 //    bm.add(0, 0);
 //    bm.add(1, 1);
@@ -92,15 +94,48 @@ int main(int argc, const char * argv[]) {
 //    bm.get((1<<16)+100, v);
 //    printf("map[(1<<16)+100] = 0x%08llu\n", v);
     
-    size_t MAX_REP = 1 << 24;
+//    size_t MAX_REP = 20;
+    size_t MAX_REP = 4535;
     
     for (size_t i = 0; i < MAX_REP; i++) {
         uint64_t k = xorshift128();
-        bm.add(k, 0);
+//        uint64_t k = i;
+        bm.add(k, k);
+        ref_map[k] = k;
 //        std::cout << "Added\n";
     }
     
     std::cout << "Done ...\n";
+    
+//    bm.full_resize();
+    
+    // tests
+    
+    // local
+    // 1520619521903936
+    
+    // moved
+    // 1708732815525741
+    // 1521501166049613
+    // 2580465799119907660
+
+//    uint64_t v;
+//    bool s = bm.get(4, v);
+//    assert(s);
+//    assert(v == 4);
+//    
+
+    size_t count = 0;
+    for(auto &x : ref_map)
+    {
+        uint64_t v;
+        bool s = bm.get(x.first, v);
+        
+        assert(s);
+        assert(v == x.second);
+        
+        count++;
+    }
     
     return 0;
 }
