@@ -101,10 +101,6 @@ public:
         }else{
             float f =setup_size/(target_load*b_size);
             original_mask_size_ = ceilf(log2f(f));
-        
-//        mask_size_ = original_mask_size_+1;
-//        mask_size_ = original_mask_size_;
-        
         }
         
         mask_size_ = original_mask_size_;
@@ -122,14 +118,6 @@ public:
         bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
         bucket_space_ = bucket_arrays_[0].first.bucket_size() * bucket_arrays_[0].first.bucket_count();
 
-//        N = 1 << mask_size_;
-//        length = N  * kPageSize;
-//        
-//        mmap = create_mmap("bucket_map_1.bin",length);
-//        
-//        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
-//        bucket_space_ += bucket_arrays_[1].first.bucket_size() * bucket_arrays_[1].first.bucket_count();
-
     }
     
     ~bucket_map()
@@ -137,6 +125,26 @@ public:
         for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
             close_mmap(it->second);
         }
+    }
+    
+    inline size_t size() const
+    {
+        return e_count_;
+    }
+    
+    inline float load() const
+    {
+        return ((float)e_count_)/(bucket_space_);
+    }
+    
+    inline size_t overflow_size() const
+    {
+        return overflow_count_;
+    }
+    
+    inline float overflow_ratio() const
+    {
+        return ((float)overflow_count_)/(e_count_);
     }
     
     inline std::pair<uint8_t, size_t> bucket_coordinates(size_t h) const
@@ -176,11 +184,7 @@ public:
         size_t h = hf(key);
 
         // first, look if it is not in the overflow map
-//        auto ob_it = overflow_map_.find(key);
-//        if (ob_it != overflow_map_.end()) {
-//            v = ob_it->second;
-//            return true;
-//        }
+
         if (get_overflow_bucket(h, v)) {
             return true;
         }
@@ -212,7 +216,6 @@ public:
         
         // get the bucket index
         size_t h = hf(key);
-//        h &= (1 << mask_size_)-1;
 
         // get the appropriate coordinates
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
@@ -221,18 +224,14 @@ public:
         // try to append the value to the bucket
         auto bucket = bucket_arrays_[coords.first].first.bucket(coords.second);
         
-//        bool success = bucket.append(value);
-        bool success = bucket.append(std::make_pair(key, v));
+        bool success = bucket.append(value);
         
         if (!success) {
             // add to the overflow bucket
-//            overflow_map_.insert(value);
             append_overflow_bucket(h, value);
             
-//            double load = ((double)e_count_)/(bucket_space_);
-//            double over_prop = ((double)overflow_count_)/(e_count_);
             
-//            std::cout << "Full bucket. " << e_count_ << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_count_ << ", overflow proportion: " << over_prop << "\n" << std::endl;
+//            std::cout << "Full bucket. " << size() << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_size() << ", overflow proportion: " << overflow_ratio() << "\n" << std::endl;
         }
         
         e_count_++;
@@ -269,14 +268,12 @@ public:
         auto const it = overflow_map_.find(bucket_index);
         
         if (it != overflow_map_.end()) {
-//            it->second[hkey] = v;
             it->second.insert(std::make_pair(hkey, v));
         }else{
             std::map<size_t, value_type> m;
-//            m[hkey] = v;
+
             m.insert(std::make_pair(hkey, v));
             
-//            overflow_map_[hkey&((1 << mask_size_)-1)] = m;
             overflow_map_.insert(std::make_pair( hkey&((1 << mask_size_)-1) , m)); // move ????
 
         }
@@ -288,11 +285,6 @@ public:
     {
         size_t index = hkey&((1 << mask_size_)-1);
         append_overflow_bucket(index, hkey, v);
-    }
-    
-    inline float load() const
-    {
-        return ((float)e_count_)/(bucket_space_);
     }
     
     inline bool should_resize() const
@@ -320,7 +312,7 @@ public:
     {
         assert(!is_resizing_);
         
-        std::cout << "Start resizing!" << std::endl;
+//        std::cout << "Start resizing!" << std::endl;
         
         // create a new bucket_array of double the size of the previous one
         
@@ -335,7 +327,6 @@ public:
         
         mmap_st mmap = create_mmap(string_stream.str().data(),length);
         bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
-//        bucket_space_ += bucket_arrays_[ba_count].first.bucket_size() * bucket_arrays_[ba_count].first.bucket_count();
 
         resize_counter_ = 0;
         is_resizing_ = true;
@@ -347,7 +338,7 @@ public:
         resize_counter_ = 0;
         is_resizing_ = false;
         
-        std::cout << "Done resizing!" << std::endl;
+//        std::cout << "Done resizing!" << std::endl;
 
     }
     
@@ -373,10 +364,6 @@ public:
     void resize_step()
     {
         // read a bucket and rewrite some of its content somewhere else
-        
-//        // get the one but last bucket array
-//        size_t ba_count = bucket_arrays_.size();
-//        bucket_array_type ba = bucket_arrays_[ba_count-2];
         
         // get the bucket pointed by resize_counter_
         std::pair<uint8_t, size_t> coords = bucket_coordinates(resize_counter_);
@@ -405,7 +392,6 @@ public:
                     size_t h = it->first;
 
                     append_overflow_bucket(h&((1 << (mask_size_+1))-1), h, *it);
-//                    printf("PROBLEM!\n");
                 }
             }
         }

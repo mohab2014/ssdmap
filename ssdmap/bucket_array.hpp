@@ -111,22 +111,7 @@ public:
 
             return true;
         }
-        
-//        inline bool append(value_type &v)
-//        {
-//            counter_ptr c_ptr = reinterpret_cast<counter_ptr>(addr_ + array_->page_size() - sizeof(counter_type));
-//            
-//            if (*c_ptr == array_->bucket_size()) {
-//                return false;
-//            }
-//            
-//            value_type *ptr = reinterpret_cast<pointer>(addr_) + size();
-//            *ptr = v;
-//            
-//            *c_ptr++;
-//            return true;
-//        }
-        
+                
         inline void prefetch() const
         {
             if(madvise(addr_, array_->page_size(), MADV_WILLNEED) == -1)
