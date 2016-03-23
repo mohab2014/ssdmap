@@ -7,11 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		314E508A1CA356E200400E6D /* checks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 314E50891CA356E200400E6D /* checks.cpp */; };
+		314E508B1CA3572C00400E6D /* mmap_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A521C9B1AD600B57FF7 /* mmap_util.c */; };
 		31D08A4C1C9B1AC200B57FF7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A4B1C9B1AC200B57FF7 /* main.cpp */; };
 		31D08A541C9B1AD600B57FF7 /* mmap_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A521C9B1AD600B57FF7 /* mmap_util.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		314E50801CA356BE00400E6D /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		31D08A461C9B1AC200B57FF7 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -24,6 +35,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		314E50821CA356BE00400E6D /* check */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = check; sourceTree = BUILT_PRODUCTS_DIR; };
+		314E50891CA356E200400E6D /* checks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = checks.cpp; path = src/checks.cpp; sourceTree = SOURCE_ROOT; };
 		3152221F1C9C67810011729F /* bucket_array.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = bucket_array.hpp; path = src/bucket_array.hpp; sourceTree = SOURCE_ROOT; };
 		31D08A481C9B1AC200B57FF7 /* ssdmap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ssdmap; sourceTree = BUILT_PRODUCTS_DIR; };
 		31D08A4B1C9B1AC200B57FF7 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = SOURCE_ROOT; };
@@ -33,6 +46,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		314E507F1CA356BE00400E6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		31D08A451C9B1AC200B57FF7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -55,6 +75,7 @@
 			isa = PBXGroup;
 			children = (
 				31D08A481C9B1AC200B57FF7 /* ssdmap */,
+				314E50821CA356BE00400E6D /* check */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -63,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				31D08A4B1C9B1AC200B57FF7 /* main.cpp */,
+				314E50891CA356E200400E6D /* checks.cpp */,
 				31D08A521C9B1AD600B57FF7 /* mmap_util.c */,
 				31D08A531C9B1AD600B57FF7 /* mmap_util.h */,
 				3152221F1C9C67810011729F /* bucket_array.hpp */,
@@ -75,6 +97,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		314E50811CA356BE00400E6D /* check */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 314E50861CA356BE00400E6D /* Build configuration list for PBXNativeTarget "check" */;
+			buildPhases = (
+				314E507E1CA356BE00400E6D /* Sources */,
+				314E507F1CA356BE00400E6D /* Frameworks */,
+				314E50801CA356BE00400E6D /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = check;
+			productName = check;
+			productReference = 314E50821CA356BE00400E6D /* check */;
+			productType = "com.apple.product-type.tool";
+		};
 		31D08A471C9B1AC200B57FF7 /* ssdmap */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 31D08A4F1C9B1AC200B57FF7 /* Build configuration list for PBXNativeTarget "ssdmap" */;
@@ -101,6 +140,9 @@
 				LastUpgradeCheck = 0720;
 				ORGANIZATIONNAME = "Raphael Bost";
 				TargetAttributes = {
+					314E50811CA356BE00400E6D = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
 					31D08A471C9B1AC200B57FF7 = {
 						CreatedOnToolsVersion = 7.2.1;
 					};
@@ -119,11 +161,21 @@
 			projectRoot = "";
 			targets = (
 				31D08A471C9B1AC200B57FF7 /* ssdmap */,
+				314E50811CA356BE00400E6D /* check */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		314E507E1CA356BE00400E6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				314E508B1CA3572C00400E6D /* mmap_util.c in Sources */,
+				314E508A1CA356E200400E6D /* checks.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		31D08A441C9B1AC200B57FF7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -136,6 +188,20 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		314E50871CA356BE00400E6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		314E50881CA356BE00400E6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		31D08A4D1C9B1AC200B57FF7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -232,6 +298,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		314E50861CA356BE00400E6D /* Build configuration list for PBXNativeTarget "check" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				314E50871CA356BE00400E6D /* Debug */,
+				314E50881CA356BE00400E6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		31D08A431C9B1AC200B57FF7 /* Build configuration list for PBXProject "ssdmap" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

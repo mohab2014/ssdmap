@@ -7,10 +7,11 @@
 //
 
 #include <iostream>
-#include <array>
-#include <cstdint>
-#include <unordered_map>
+#include <fstream>
+
 #include <ftw.h>
+#include <chrono>
+#include <vector>
 
 #include "mmap_util.h"
 #include "bucket_array.hpp"
@@ -29,139 +30,68 @@ uint64_t xorshift128(void) {
     return w;
 }
 
-void correctness_check(const std::string &filename, size_t initial_size, size_t test_size, bool systematic_test, bool stop_fail = false)
+void benchmark(const std::string &filename, const std::string &write_bench_file, const std::string &read_bench_file, size_t initial_size, size_t test_size)
 {
-    if (systematic_test) {
-        std::cout << "Systematic correctness check:\n";
-    }else{
-        std::cout << "Correctness check:\n";
-    }
+    std::cout << "Start benchmark\n";
     std::cout << "Initial size: " << initial_size;
     std::cout << ", test size: " << test_size << std::endl;
     
     bucket_map<uint64_t,uint64_t> bm(filename,initial_size); // 700 => 4 buckets
-    std::map<uint64_t, uint64_t> ref_map;
+//    std::map<uint64_t, uint64_t> ref_map;
+    
+    std::vector<size_t> timings(test_size);
     
     std::cout << "Fill the map ..." << std::flush;
 
-    size_t fail_count = 0;
 
     for (size_t i = 0; i < test_size; i++) {
         uint64_t k = xorshift128();
 
+        auto begin = std::chrono::high_resolution_clock::now();
+
         bm.add(k, k);
-        ref_map[k] = k;
-        
-        
-        if(systematic_test){
-            for(auto &x : ref_map)
-            {
-                uint64_t v;
-                bool s = bm.get(x.first, v);
 
-                if ((!s || v != x.second)) {
-                    if (stop_fail) {
-                        std::cout << "Correctness check failed\n";
-                        return;
-                    }else{
-                        fail_count++;
-                    }
-                }
+        auto end = std::chrono::high_resolution_clock::now();
+        
+        timings[i] = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+        
 
-            }
-        }
+//        ref_map[k] = k;
     }
     
     std::cout << " done\n";
-    
-    size_t count = 0;
 
-    if(!systematic_test){ // this test has already been run is systematic_test is set to true
+    std::ofstream write_timings_file;
+    write_timings_file.open (write_bench_file);
 
-        for(auto &x : ref_map)
-        {
-            uint64_t v;
-            bool s = bm.get(x.first, v);
-            
-            if ((!s || v != x.second)) {
-                if (stop_fail) {
-                    std::cout << "Correctness check failed\n";
-                    return;
-                }else{
-                    fail_count++;
-                }
-            }
-            
-            count++;
-        }
+    for (auto it = timings.begin(); it != timings.end(); ++it) {
+//        timings_file << ((double)(*it))/(1e6) << std::endl;
+        write_timings_file << (*it) << std::endl;
     }
-    if (fail_count > 0) {
-        std::cout << "Correctness check failed, " << fail_count << "errors\n";
-    }else{
-        std::cout << "Correctness check passed\n\n";
-    }
-}
 
-void persistency_check(const std::string &filename, size_t test_size, bool stop_fail = false)
-{
-    std::cout << "Persistency check:\n";
-    std::cout << "Test size: " << test_size << std::endl;
+    write_timings_file.close();
 
-    bucket_map<uint64_t,uint64_t> *bm = new bucket_map<uint64_t,uint64_t>(filename,700); // 700 => 4 buckets
-    std::map<uint64_t, uint64_t> ref_map;
-    
-    std::cout << "Fill the map ..." << std::flush;
+    uint64_t v;
     for (size_t i = 0; i < test_size; i++) {
-        uint64_t k = xorshift128();
 
-        bm->add(k, k);
-        ref_map[k] = k;
-    }
-    
-    std::cout << " done" << std::endl;
-    
-    std::cout << "Flush to disk ..." << std::flush;
-    
-    delete bm;
-
-    std::cout << " done" << std::endl;
-
-    std::cout << "Read from disk ..." << std::flush;
-    
-    bm = new bucket_map<uint64_t,uint64_t>(filename,700); // 700 => 4 buckets
-
-    std::cout << " done" << std::endl;
-
-    std::cout << "Test consistency ..." << std::endl;
-
-    size_t count = 0;
-    size_t fail_count = 0;
-    for(auto &x : ref_map)
-    {
-        uint64_t v;
-        bool s = bm->get(x.first, v);
+        auto begin = std::chrono::high_resolution_clock::now();
+        bm.get(i, v);
+        auto end = std::chrono::high_resolution_clock::now();
         
-        if ((!s || v != x.second)) {
-            if (stop_fail) {
-                std::cout << "Weak correctness check failed\n";
-                return;
-            }else{
-                fail_count++;
-            }
-        }
-        
-        count++;
+        timings[i] = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
     }
     
-    if (fail_count > 0) {
-        std::cout << "Persistency check failed, " << fail_count << "errors\n";
-    }else{
-        std::cout << "Persistency check passed\n\n";
-    }
+    std::ofstream read_timings_file;
+    read_timings_file.open (read_bench_file);
     
-    delete bm;
+    for (auto it = timings.begin(); it != timings.end(); ++it) {
+        //        timings_file << ((double)(*it))/(1e6) << std::endl;
+        read_timings_file << (*it) << std::endl;
+    }
+    read_timings_file.close();
 
 }
+
 
 /* Call unlink or rmdir on the path, as appropriate. */
 int
@@ -196,20 +126,20 @@ int main(int argc, const char * argv[]) {
     
     std::cout << "Pre-cleaning ..." << std::flush;
     
-    clean({"correctness_map.dat", "systematic_correctness_map.dat", "persistency_test.dat"});
+    clean({"bench.dat","bench"});
     
     std::cout << " done\n\n" << std::endl;
     
+    if (mkdir("bench",(mode_t)0700) != 0) {
+        throw std::runtime_error("Unable to create the bench directory");
+    }
 
-    correctness_check("correctness_map.dat", 700, 1<<15, false, false);
-    
-    correctness_check("systematic_correctness_map.dat", 700, 1<<13, true, true);
-    
-    persistency_check("persistency_test.dat", 1 << 20);
+
+    benchmark("bench.dat", "bench/write_bench.out", "bench/read_bench.out", 1<<15, 1<<20);
     
     std::cout << "Post-cleaning ..." << std::flush;
     
-    clean({"correctness_map.dat", "systematic_correctness_map.dat", "persistency_test.dat"});
+    clean({"bench.dat"});
     
     std::cout << " done" << std::endl;
     
