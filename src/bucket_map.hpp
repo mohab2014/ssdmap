@@ -42,7 +42,7 @@ constexpr size_t kBucketMapResizeMaxOverflowSize = 1e5; // no more than 1e5 elem
 constexpr float kBucketMapResizeMaxOverflowRatio = 0.1; // no more than 10% of elements in the overflow bucket
 constexpr size_t kBucketMapResizeStepIterations = 4;
 
-constexpr size_t kPageSize = 4096;
+constexpr size_t kPageSize = 512;
 
 template <class Key, class T, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>>
 class bucket_map {
