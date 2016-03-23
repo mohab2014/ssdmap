@@ -16,10 +16,8 @@
 #include "bucket_array.hpp"
 #include "bucket_map.hpp"
 
-//static uint64_t x=123456789, y=362436069, z=521288629;
 
 static uint64_t x=123456789, y=362436069, z=521288629, w=314159;
-//static uint64_t x, y, z, w;
 
 uint64_t xorshift128(void) {
     uint64_t t = x;

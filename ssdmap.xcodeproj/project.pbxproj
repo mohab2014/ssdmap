@@ -24,12 +24,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		3152221F1C9C67810011729F /* bucket_array.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = bucket_array.hpp; sourceTree = "<group>"; };
+		3152221F1C9C67810011729F /* bucket_array.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = bucket_array.hpp; path = src/bucket_array.hpp; sourceTree = SOURCE_ROOT; };
 		31D08A481C9B1AC200B57FF7 /* ssdmap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ssdmap; sourceTree = BUILT_PRODUCTS_DIR; };
-		31D08A4B1C9B1AC200B57FF7 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		31D08A521C9B1AD600B57FF7 /* mmap_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmap_util.c; sourceTree = "<group>"; };
-		31D08A531C9B1AD600B57FF7 /* mmap_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mmap_util.h; sourceTree = "<group>"; };
-		31D68DA21C9F417B008B511D /* bucket_map.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bucket_map.hpp; sourceTree = "<group>"; };
+		31D08A4B1C9B1AC200B57FF7 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = SOURCE_ROOT; };
+		31D08A521C9B1AD600B57FF7 /* mmap_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mmap_util.c; path = src/mmap_util.c; sourceTree = SOURCE_ROOT; };
+		31D08A531C9B1AD600B57FF7 /* mmap_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mmap_util.h; path = src/mmap_util.h; sourceTree = SOURCE_ROOT; };
+		31D68DA21C9F417B008B511D /* bucket_map.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = bucket_map.hpp; path = src/bucket_map.hpp; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,7 +46,7 @@
 		31D08A3F1C9B1AC200B57FF7 = {
 			isa = PBXGroup;
 			children = (
-				31D08A4A1C9B1AC200B57FF7 /* ssdmap */,
+				31D08A4A1C9B1AC200B57FF7 /* src */,
 				31D08A491C9B1AC200B57FF7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -59,7 +59,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		31D08A4A1C9B1AC200B57FF7 /* ssdmap */ = {
+		31D08A4A1C9B1AC200B57FF7 /* src */ = {
 			isa = PBXGroup;
 			children = (
 				31D08A4B1C9B1AC200B57FF7 /* main.cpp */,
@@ -68,6 +68,7 @@
 				3152221F1C9C67810011729F /* bucket_array.hpp */,
 				31D68DA21C9F417B008B511D /* bucket_map.hpp */,
 			);
+			name = src;
 			path = ssdmap;
 			sourceTree = "<group>";
 		};
