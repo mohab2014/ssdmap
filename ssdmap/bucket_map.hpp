@@ -489,7 +489,6 @@ public:
         }
         
         // create a new memory map for the overflow bucket
-//        typedef typename overflow_map_type::value_type pair_type;
         typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
         
         std::string overflow_temp_path = base_filename_ + "/overflow.tmp";
@@ -505,9 +504,6 @@ public:
             for (auto &x : sub_map.second) {
                 pair_type tmp = std::make_pair(sub_map.first, x);
                 memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
-                std::cout << sub_map.first << ": \t " << x.first << " ; " /* << x.second*/ << std::endl;
-                std::cout << elt_ptr[i].first << ": \t " << elt_ptr[i].second.first << " ; " /*<< elt_ptr[i].second.second */ << std::endl;
-
                 i++;
             }
         }
@@ -515,17 +511,6 @@ public:
         // flush it to the disk
         close_mmap(over_mmap, 1);
         
-//        std::cout << "====TEST====" << std::endl;
-//        over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
-//        elt_ptr = (pair_type*) over_mmap.mmap_addr;
-//        
-//        
-//        for (size_t i = 0; i < overflow_count_; i++) {
-//            //            overflow_map_.insert(*(elt_ptr + i));
-//            //            std::cout << elt_ptr[i].second.first << std::endl;
-//            std::cout << elt_ptr[i].first << ": \t " << elt_ptr[i].second.first << " ; " /*<< elt_ptr[i].second.second */ << std::endl;
-//        }
-
         // erase the old overflow file and replace it by the temp file
         std::string overflow_path = base_filename_ + "/overflow.bin";
         remove(overflow_path.data());
@@ -575,12 +560,9 @@ private:
         
         size_t N = 1 << (original_mask_size_);
         
-        size_t length = N  * kPageSize;
 
         for (uint8_t i = 0; i < meta_ptr->bucket_arrays_count; i++) {
-//            std::ostringstream string_stream;
-//            string_stream << base_filename_ << "/data." << std::dec << i;
-            
+            size_t length = N  * kPageSize;
             
             std::string fn = base_filename_ + "/data." + std::to_string(i);
             std::cout << fn << std::endl;
@@ -599,7 +581,7 @@ private:
                 bucket_space_ += resize_counter_*bucket_arrays_[i].first.bucket_size() * bucket_arrays_[i].first.bucket_count();
             }
 
-            length <<= 1;
+            N <<= 1;
         }
 
         // read the overflow bucket
@@ -611,15 +593,11 @@ private:
 
         mmap_st over_mmap = create_mmap(overflow_path.data(), (meta_ptr->overflow_count)*sizeof(typename overflow_map_type::value_type));
         
-//        typedef typename overflow_map_type::value_type pair_type;
         typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
         pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
         
         for (size_t i = 0; i < meta_ptr->overflow_count; i++) {
-//            overflow_map_.insert(*(elt_ptr + i));
-//            std::cout << elt_ptr[i].second.first << std::endl;
             append_overflow_bucket(elt_ptr[i].first, elt_ptr[i].second.first, elt_ptr[i].second.second);
-            std::cout << elt_ptr[i].first << ": \t " << elt_ptr[i].second.first << " ; " /*<< elt_ptr[i].second.second */ << std::endl;
         }
         
         overflow_count_         = meta_ptr->overflow_count;
