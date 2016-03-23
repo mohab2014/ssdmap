@@ -96,11 +96,11 @@ int close_mmap(mmap_st map, uint8_t flush)
     
     if (flush) {
         ret = flush_mmap(map, SYNCFLAG);
-//        if (ret == -1) {
-//            perror("Error syncing the map.");
-//            
+        if (ret == -1) {
+            perror("Error syncing the map.");
+            
 //            exit(EXIT_FAILURE);
-//        }
+        }
     }
     
     if (munmap(map.mmap_addr, map.length) == -1) {
