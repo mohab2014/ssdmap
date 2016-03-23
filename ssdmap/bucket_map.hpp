@@ -543,7 +543,6 @@ private:
         std::string meta_path = base_filename_ + "/meta.bin";
 
         if (stat (meta_path.data(), &buffer) != 0) { // the meta data file is not there
-            std::cout << meta_path << std::endl;
             throw std::runtime_error("bucket_map constructor: metadata file does not exist");
         }
 
@@ -565,7 +564,6 @@ private:
             size_t length = N  * kPageSize;
             
             std::string fn = base_filename_ + "/data." + std::to_string(i);
-            std::cout << fn << std::endl;
             
             if (stat (fn.data(), &buffer) != 0) { // the file is not there
                 throw std::runtime_error("bucket_map constructor: " + std::to_string(i) + "-th data file does not exist.");

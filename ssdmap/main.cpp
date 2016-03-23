@@ -31,11 +31,17 @@ uint64_t xorshift128(void) {
     return w;
 }
 
-void weak_correctness_check(size_t test_size)
+void weak_correctness_check(size_t initial_size, size_t test_size, bool stop_fail = false)
 {
-    bucket_map<uint64_t,uint64_t> bm("w_correctness_map.dat",700); // 700 => 4 buckets
+    std::cout << "Weak correctness check:\n";
+    std::cout << "Initial size: " << initial_size;
+    std::cout << ", test size: " << test_size << std::endl;
+    
+    bucket_map<uint64_t,uint64_t> bm("w_correctness_map.dat",initial_size); // 700 => 4 buckets
     std::map<uint64_t, uint64_t> ref_map;
     
+    std::cout << "Fill the map ..." << std::flush;
+
     for (size_t i = 0; i < test_size; i++) {
         uint64_t k = xorshift128();
         //        uint64_t k = i;
@@ -58,40 +64,38 @@ void weak_correctness_check(size_t test_size)
     
     std::cout << "Done ...\n";
     
-    //    bm.full_resize();
-    
-    // tests
-    
-    // local
-    // 1520619521903936
-    
-    // moved
-    // 1708732815525741
-    // 1521501166049613
-    // 2580465799119907660
-    
-    //    uint64_t v;
-    //    bool s = bm.get(16, v);
-    //    assert(s);
-    //    assert(v == 16);
-    
-    
     size_t count = 0;
+    size_t fail_count = 0;
     for(auto &x : ref_map)
     {
         uint64_t v;
         bool s = bm.get(x.first, v);
         
-        assert(s);
-        assert(v == x.second);
+        if ((!s || v != x.second)) {
+            if (stop_fail) {
+                std::cout << "Weak correctness check failed\n";
+                return;
+            }else{
+                fail_count++;
+            }
+        }
         
         count++;
     }
+    
+    if (fail_count > 0) {
+        std::cout << "Weak correctness check failed, " << fail_count << "errors\n";
+    }else{
+        std::cout << "Weak correctness check passed\n\n";
+    }
 }
 
-void persistency_check(size_t test_size)
+void persistency_check(size_t test_size, bool stop_fail = false)
 {
-    bucket_map<uint64_t,uint64_t> *bm = new bucket_map<uint64_t,uint64_t>("persitency_test.dat",700); // 700 => 4 buckets
+    std::cout << "Persistency check:\n";
+    std::cout << "Test size: " << test_size << std::endl;
+
+    bucket_map<uint64_t,uint64_t> *bm = new bucket_map<uint64_t,uint64_t>("persistency_test.dat",700); // 700 => 4 buckets
     std::map<uint64_t, uint64_t> ref_map;
     
     std::cout << "Fill the map ..." << std::flush;
@@ -114,24 +118,36 @@ void persistency_check(size_t test_size)
 
     std::cout << "Read from disk ..." << std::flush;
     
-    bm = new bucket_map<uint64_t,uint64_t>("persitency_test.dat",700); // 700 => 4 buckets
+    bm = new bucket_map<uint64_t,uint64_t>("persistency_test.dat",700); // 700 => 4 buckets
 
     std::cout << " done" << std::endl;
 
-    std::cout << "Test consistency ..." << std::flush;
+    std::cout << "Test consistency ..." << std::endl;
 
     size_t count = 0;
+    size_t fail_count = 0;
     for(auto &x : ref_map)
     {
         uint64_t v;
         bool s = bm->get(x.first, v);
         
-        assert(s);
-        assert(v == x.second);
+        if ((!s || v != x.second)) {
+            if (stop_fail) {
+                std::cout << "Weak correctness check failed\n";
+                return;
+            }else{
+                fail_count++;
+            }
+        }
         
         count++;
     }
-    std::cout << " done" << std::endl;
+    
+    if (fail_count > 0) {
+        std::cout << "Persistency check failed, " << fail_count << "errors\n";
+    }else{
+        std::cout << "Persistency check passed\n\n";
+    }
     
     delete bm;
 
@@ -148,10 +164,13 @@ rm( const char *path, const struct stat *s, int flag, struct FTW *f )
         default:     rm_func = unlink; break;
         case FTW_DP: rm_func = rmdir;
     }
-    if( status = rm_func( path ), status != 0 )
-        perror( path );
-    else
-        puts( path );
+    rm_func( path );
+    
+//    if( status = rm_func( path ), status != 0 )
+//        perror( path );
+//    else
+//        puts( path );
+
     return status;
 }
 
@@ -160,7 +179,7 @@ void clean()
     if( nftw( "w_correctness_map.dat", rm, OPEN_MAX, FTW_DEPTH )) {
 //        perror( "Failed to delete w_correctness_map.dat" );
     }
-    if( nftw( "persitency_test.dat", rm, OPEN_MAX, FTW_DEPTH )) {
+    if( nftw( "persistency_test.dat", rm, OPEN_MAX, FTW_DEPTH )) {
 //        perror( "Failed to delete persitency_test.dat" );
     }
 }
@@ -177,11 +196,13 @@ int main(int argc, const char * argv[]) {
     
     clean();
     
-    std::cout << " done" << std::endl;
+    std::cout << " done\n\n" << std::endl;
     
 
-//    weak_correctness_check(1 << 15);
-    persistency_check(1 << 15);
+    weak_correctness_check(700, 1<<15);
+//    weak_correctness_check(1 << 20, 1<<30);
+    
+    persistency_check(1 << 20);
     
     std::cout << "Post-cleaning..." << std::flush;
     
