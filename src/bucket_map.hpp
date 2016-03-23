@@ -62,7 +62,9 @@ public:
     typedef std::pair<key_type, mapped_type>                        bucket_value_type;
     typedef bucket_array<bucket_value_type>                         bucket_array_type;
     typedef typename bucket_array_type::bucket_type                 bucket_type;
-    typedef std::map<size_t, std::map<size_t,value_type>>           overflow_map_type;
+    
+    typedef std::unordered_map<size_t, value_type>                  overflow_submap_type;
+    typedef std::unordered_map<size_t, overflow_submap_type>           overflow_map_type;
 private:
 //    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
     overflow_map_type overflow_map_;
@@ -234,7 +236,7 @@ public:
         
         // get the bucket and prefetch it
         auto bucket = get_bucket(coords);
-        bucket.prefetch();
+//        bucket.prefetch();
         
         // scan throught the bucket to find the element
         for (auto it = bucket.begin(); it != bucket.end(); ++it) {
@@ -307,7 +309,7 @@ public:
         if (it != overflow_map_.end()) {
             it->second.insert(std::make_pair(hkey, v));
         }else{
-            std::map<size_t, value_type> m;
+            overflow_submap_type m;
 
             m.insert(std::make_pair(hkey, v));
             
@@ -442,7 +444,7 @@ public:
         
         if (bucket_it != overflow_map_.end()) {
             // initialize the current bucket
-            std::map<size_t,value_type> current_of_bucket(std::move(bucket_it->second));
+            overflow_submap_type current_of_bucket(std::move(bucket_it->second));
             
             // erase the old value
             overflow_map_.erase(resize_counter_);
