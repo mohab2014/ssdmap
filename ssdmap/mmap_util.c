@@ -77,16 +77,30 @@ mmap_st create_mmap(const char *pathname, size_t length)
     return map;
 }
 
-int close_mmap(mmap_st map)
+int flush_mmap(mmap_st map, uint8_t sync_flag)
 {
     int ret;
     
-    ret = msync(map.mmap_addr, map.length, MS_SYNC);
-
+    ret = msync(map.mmap_addr, map.length, ((sync_flag == ASYNCFLAG) ? MS_ASYNC : MS_SYNC));
+    
     if (ret == -1) {
         perror("Error syncing the map.");
+    }
+    
+    return ret;
+}
 
-        exit(EXIT_FAILURE);
+int close_mmap(mmap_st map, uint8_t flush)
+{
+    int ret;
+    
+    if (flush) {
+        ret = flush_mmap(map, ASYNCFLAG);
+//        if (ret == -1) {
+//            perror("Error syncing the map.");
+//            
+//            exit(EXIT_FAILURE);
+//        }
     }
     
     if (munmap(map.mmap_addr, map.length) == -1) {

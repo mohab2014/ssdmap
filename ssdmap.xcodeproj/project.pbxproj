@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		31D08A4C1C9B1AC200B57FF7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A4B1C9B1AC200B57FF7 /* main.cpp */; };
 		31D08A541C9B1AD600B57FF7 /* mmap_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A521C9B1AD600B57FF7 /* mmap_util.c */; };
+		6C150EC21CA284EA00569EDE /* checks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6C150EC01CA284EA00569EDE /* checks.cpp */; settings = {ASSET_TAGS = (); }; };
+		6C150EC51CA289E400569EDE /* fs_util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6C150EC31CA289E400569EDE /* fs_util.cpp */; settings = {ASSET_TAGS = (); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -30,6 +32,10 @@
 		31D08A521C9B1AD600B57FF7 /* mmap_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mmap_util.c; sourceTree = "<group>"; };
 		31D08A531C9B1AD600B57FF7 /* mmap_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mmap_util.h; sourceTree = "<group>"; };
 		31D68DA21C9F417B008B511D /* bucket_map.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bucket_map.hpp; sourceTree = "<group>"; };
+		6C150EC01CA284EA00569EDE /* checks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = checks.cpp; sourceTree = "<group>"; };
+		6C150EC11CA284EA00569EDE /* checks.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = checks.hpp; sourceTree = "<group>"; };
+		6C150EC31CA289E400569EDE /* fs_util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fs_util.cpp; sourceTree = "<group>"; };
+		6C150EC41CA289E400569EDE /* fs_util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fs_util.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,10 +69,14 @@
 			isa = PBXGroup;
 			children = (
 				31D08A4B1C9B1AC200B57FF7 /* main.cpp */,
+				6C150EC01CA284EA00569EDE /* checks.cpp */,
+				6C150EC11CA284EA00569EDE /* checks.hpp */,
 				31D08A521C9B1AD600B57FF7 /* mmap_util.c */,
 				31D08A531C9B1AD600B57FF7 /* mmap_util.h */,
 				3152221F1C9C67810011729F /* bucket_array.hpp */,
 				31D68DA21C9F417B008B511D /* bucket_map.hpp */,
+				6C150EC31CA289E400569EDE /* fs_util.cpp */,
+				6C150EC41CA289E400569EDE /* fs_util.hpp */,
 			);
 			path = ssdmap;
 			sourceTree = "<group>";
@@ -127,7 +137,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C150EC21CA284EA00569EDE /* checks.cpp in Sources */,
 				31D08A541C9B1AD600B57FF7 /* mmap_util.c in Sources */,
+				6C150EC51CA289E400569EDE /* fs_util.cpp in Sources */,
 				31D08A4C1C9B1AC200B57FF7 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

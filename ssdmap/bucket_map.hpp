@@ -16,11 +16,12 @@
 #include <map>
 #include <vector>
 #include <list>
-
-#include <cmath>
 #include <string>
 #include <sstream>
+
+#include <cmath>
 #include <cassert>
+#include <sys/stat.h>
 
 uint8_t log2llu(size_t x)
 {
@@ -58,13 +59,12 @@ public:
     typedef ptrdiff_t       difference_type;
     
     
-    typedef std::pair<key_type, mapped_type>                     bucket_value_type;
-    typedef bucket_array<bucket_value_type> bucket_array_type;
-
-    
+    typedef std::pair<key_type, mapped_type>                        bucket_value_type;
+    typedef bucket_array<bucket_value_type>                         bucket_array_type;
+    typedef std::map<size_t, std::map<size_t,value_type>>           overflow_map_type;
 private:
 //    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
-    std::map<size_t, std::map<size_t,value_type>> overflow_map_;
+    overflow_map_type overflow_map_;
     
     std::vector<std::pair<bucket_array_type, mmap_st> > bucket_arrays_;
     
@@ -84,47 +84,70 @@ private:
     bool is_resizing_;
     size_t resize_counter_;
     
+    typedef struct
+    {
+        uint8_t original_mask_size;
+        uint8_t bucket_arrays_count;
+        bool is_resizing;
+        size_t resize_counter;
+        size_t e_count;
+        size_t overflow_count;
+    } metadata_type;
+
 public:
     
-    bucket_map(const size_type setup_size, const hasher& hf = hasher(), const key_equal& eql = key_equal())
-    : e_count_(0), overflow_count_(0), bucket_arrays_(), is_resizing_(false)
+    bucket_map(const std::string &path, const size_type setup_size, const hasher& hf = hasher(), const key_equal& eql = key_equal())
+    : base_filename_(path), e_count_(0), overflow_count_(0), overflow_map_(), bucket_arrays_(), is_resizing_(false)
     {
 
-        
-        size_t b_size = bucket_array_type::optimal_bucket_size(kPageSize);
-        float target_load = 0.75;
-        size_t N;
-        
-        if(target_load*b_size >= setup_size)
+        // check is there already is a directory at path
+        struct stat buffer;
+        if(stat (base_filename_.data(), &buffer) == 0) // there is something at path
         {
-            original_mask_size_ = 1;
+            if (!S_ISDIR(buffer.st_mode)) {
+                throw std::runtime_error("bucket_map constructor: Invalid path");
+            }
+            
+            init_from_file();
         }else{
-            float f =setup_size/(target_load*b_size);
-            original_mask_size_ = ceilf(log2f(f));
+            // create a new directory
+            if (mkdir(base_filename_.data(),(mode_t)0700) != 0) {
+                throw std::runtime_error("bucket_map constructor: Unable to create the data directory");
+            }
+            
+            
+            size_t b_size = bucket_array_type::optimal_bucket_size(kPageSize);
+            float target_load = 0.75;
+            size_t N;
+            
+            if(target_load*b_size >= setup_size)
+            {
+                original_mask_size_ = 1;
+            }else{
+                float f =setup_size/(target_load*b_size);
+                original_mask_size_ = ceilf(log2f(f));
+            }
+            
+            mask_size_ = original_mask_size_;
+            N = 1 << mask_size_;
+
+            size_t length = N  * kPageSize;
+            
+    //        base_filename_ = "bucket_map.bin";
+            
+            std::ostringstream string_stream;
+            string_stream << base_filename_ << "/data." << std::dec << 0;
+            
+            mmap_st mmap = create_mmap(string_stream.str().data(),length);
+            
+            bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
+            bucket_space_ = bucket_arrays_[0].first.bucket_size() * bucket_arrays_[0].first.bucket_count();
         }
-        
-        mask_size_ = original_mask_size_;
-        N = 1 << mask_size_;
-
-        size_t length = N  * kPageSize;
-        
-        base_filename_ = "bucket_map.bin";
-        
-        std::ostringstream string_stream;
-        string_stream << base_filename_ << "." << std::dec << 0;
-        
-        mmap_st mmap = create_mmap(string_stream.str().data(),length);
-        
-        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
-        bucket_space_ = bucket_arrays_[0].first.bucket_size() * bucket_arrays_[0].first.bucket_count();
-
     }
     
     ~bucket_map()
     {
-        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
-            close_mmap(it->second);
-        }
+        flush();
     }
     
     inline size_t size() const
@@ -323,8 +346,8 @@ public:
         size_t length = N  * kPageSize;
         
         std::ostringstream string_stream;
-        string_stream << base_filename_ << "." << std::dec << ba_count;
-        
+        string_stream << base_filename_ << "/data." << std::dec << ba_count;
+
         mmap_st mmap = create_mmap(string_stream.str().data(),length);
         bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
 
@@ -441,4 +464,144 @@ public:
         
         bucket_space_ += bucket_arrays_.back().first.bucket_size();
     }
+    
+    void flush() const
+    {
+        // flush the data to the disk
+        
+        // start by syncing the bucket arrays
+        // do it asynchronously for now
+        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
+            flush_mmap(it->second,ASYNCFLAG);
+        }
+        
+        // create a new memory map for the overflow bucket
+//        typedef typename overflow_map_type::value_type pair_type;
+        typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
+        
+        std::string overflow_temp_path = base_filename_ + "/overflow.tmp";
+        mmap_st over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
+        
+
+        pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
+        size_t i = 0;
+        
+        for (auto &sub_map : overflow_map_) {
+            // submap is a map
+            
+            for (auto &x : sub_map.second) {
+                pair_type tmp = std::make_pair(sub_map.first, x);
+                memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
+                i++;
+            }
+//            std::cout << elt_ptr[i].second.first << std::endl;
+        }
+        
+        // flush it to the disk
+        close_mmap(over_mmap, 1);
+        
+        // erase the old overflow file and replace it by the temp file
+        std::string overflow_path = base_filename_ + "/overflow.bin";
+        remove(overflow_path.data());
+        rename(overflow_temp_path.data(), overflow_path.data());
+        
+        std::string meta_path = base_filename_ + "/meta.bin";
+        mmap_st meta_mmap = create_mmap(meta_path.data(), sizeof(metadata_type));
+        metadata_type *meta_ptr = (metadata_type *)meta_mmap.mmap_addr;
+
+        meta_ptr->original_mask_size = original_mask_size_;
+        meta_ptr->is_resizing = is_resizing_;
+        meta_ptr->resize_counter = resize_counter_;
+        meta_ptr->overflow_count = overflow_count_;
+        meta_ptr->e_count = e_count_;
+        meta_ptr->bucket_arrays_count = bucket_arrays_.size();
+        
+        close_mmap(meta_mmap,1);
+
+        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
+            close_mmap(it->second,1);
+        }
+    }
+private:
+    void init_from_file()
+    {
+        // start by reading the meta data
+        struct stat buffer;
+        
+        std::string meta_path = base_filename_ + "/meta.bin";
+
+        if (stat (meta_path.data(), &buffer) != 0) { // the meta data file is not there
+            std::cout << meta_path << std::endl;
+            throw std::runtime_error("bucket_map constructor: metadata file does not exist");
+        }
+
+        mmap_st meta_mmap = create_mmap(meta_path.data(), sizeof(metadata_type));
+        
+        metadata_type *meta_ptr = (metadata_type *)meta_mmap.mmap_addr;
+        
+        original_mask_size_     = meta_ptr->original_mask_size;
+        is_resizing_            = meta_ptr->is_resizing;
+        resize_counter_         = meta_ptr->resize_counter;
+        e_count_                = meta_ptr->e_count;
+        
+        mask_size_ = original_mask_size_ + meta_ptr->bucket_arrays_count;
+        
+        size_t N = 1 << (original_mask_size_);
+        
+        size_t length = N  * kPageSize;
+
+        for (uint8_t i = 0; i < meta_ptr->bucket_arrays_count; i++) {
+//            std::ostringstream string_stream;
+//            string_stream << base_filename_ << "/data." << std::dec << i;
+            
+            
+            std::string fn = base_filename_ + "/data." + std::to_string(i);
+            std::cout << fn << std::endl;
+            
+            if (stat (fn.data(), &buffer) != 0) { // the file is not there
+                throw std::runtime_error("bucket_map constructor: " + std::to_string(i) + "-th data file does not exist.");
+            }
+
+            mmap_st mmap = create_mmap(fn.data(),length);
+            
+            bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
+            
+            if (is_resizing_ == false || i < meta_ptr->bucket_arrays_count-1) {
+                bucket_space_ += bucket_arrays_[i].first.bucket_size() * bucket_arrays_[i].first.bucket_count();
+            }else{
+                bucket_space_ += resize_counter_*bucket_arrays_[i].first.bucket_size() * bucket_arrays_[i].first.bucket_count();
+            }
+
+            length <<= 1;
+        }
+
+        // read the overflow bucket
+        std::string overflow_path = base_filename_ + "/overflow.bin";
+        
+        if (stat (overflow_path.data(), &buffer) != 0) { // the overflow file is not there
+            throw std::runtime_error("bucket_map constructor: Overflow file does not exist.");
+        }
+
+        mmap_st over_mmap = create_mmap(meta_path.data(), (meta_ptr->overflow_count)*sizeof(typename overflow_map_type::value_type));
+        
+//        typedef typename overflow_map_type::value_type pair_type;
+        typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
+        pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
+        
+        for (size_t i = 0; i < meta_ptr->overflow_count; i++) {
+//            overflow_map_.insert(*(elt_ptr + i));
+//            std::cout << elt_ptr[i].second.first << std::endl;
+            append_overflow_bucket(elt_ptr[i].first, elt_ptr[i].second.first, elt_ptr[i].second.second);
+        
+        }
+        
+        overflow_count_         = meta_ptr->overflow_count;
+
+        // close the overflow mmap, no need to flush (we only read it)
+        close_mmap(over_mmap,0);
+        
+        // close the metadata map, no need to flush (we only read it)
+        close_mmap(meta_mmap,0);
+    }
+    
 };
