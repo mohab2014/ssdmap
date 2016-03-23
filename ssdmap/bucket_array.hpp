@@ -125,7 +125,7 @@ public:
     };
     
     typedef bucket bucket_type;
-    
+
     inline static size_t optimal_bucket_size(const size_t page_size)
     {
         return (page_size - sizeof(counter_type))/sizeof(value_type);

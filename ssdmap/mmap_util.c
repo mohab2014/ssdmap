@@ -95,7 +95,7 @@ int close_mmap(mmap_st map, uint8_t flush)
     int ret;
     
     if (flush) {
-        ret = flush_mmap(map, ASYNCFLAG);
+        ret = flush_mmap(map, SYNCFLAG);
 //        if (ret == -1) {
 //            perror("Error syncing the map.");
 //            

@@ -61,6 +61,7 @@ public:
     
     typedef std::pair<key_type, mapped_type>                        bucket_value_type;
     typedef bucket_array<bucket_value_type>                         bucket_array_type;
+    typedef typename bucket_array_type::bucket_type                 bucket_type;
     typedef std::map<size_t, std::map<size_t,value_type>>           overflow_map_type;
 private:
 //    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
@@ -202,6 +203,20 @@ public:
         return std::make_pair(0, h);
     }
     
+    inline bucket_type get_bucket(uint8_t ba_index, size_t b_pos)
+    {
+        if (ba_index >= bucket_arrays_.size()) {
+            throw std::out_of_range("bucket_map::get_bucket");
+        }
+        
+        return bucket_arrays_[ba_index].first.bucket(b_pos);
+    }
+
+    inline bucket_type get_bucket(const std::pair<uint8_t, size_t> &p)
+    {
+        return get_bucket(p.first, p.second);
+    }
+
     bool get(key_type key, mapped_type& v, const hasher& hf = hasher(), const key_equal& eql = key_equal())
     {
         size_t h = hf(key);
@@ -218,7 +233,7 @@ public:
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
         
         // get the bucket and prefetch it
-        auto bucket = bucket_arrays_[coords.first].first.bucket(coords.second);
+        auto bucket = get_bucket(coords);
         bucket.prefetch();
         
         // scan throught the bucket to find the element
@@ -243,9 +258,8 @@ public:
         // get the appropriate coordinates
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
 
-        assert(coords.first < bucket_arrays_.size());
         // try to append the value to the bucket
-        auto bucket = bucket_arrays_[coords.first].first.bucket(coords.second);
+        auto bucket = get_bucket(coords);
         
         bool success = bucket.append(value);
         
@@ -390,8 +404,7 @@ public:
         
         // get the bucket pointed by resize_counter_
         std::pair<uint8_t, size_t> coords = bucket_coordinates(resize_counter_);
-        auto b = bucket_arrays_[coords.first].first.bucket(coords.second);
-        
+        auto b = get_bucket(coords);
 
         size_t mask = (1 << mask_size_);
         auto new_bucket = bucket_arrays_.back().first.bucket(resize_counter_);
@@ -492,18 +505,32 @@ public:
             for (auto &x : sub_map.second) {
                 pair_type tmp = std::make_pair(sub_map.first, x);
                 memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
+                std::cout << sub_map.first << ": \t " << x.first << " ; " /* << x.second*/ << std::endl;
+                std::cout << elt_ptr[i].first << ": \t " << elt_ptr[i].second.first << " ; " /*<< elt_ptr[i].second.second */ << std::endl;
+
                 i++;
             }
-//            std::cout << elt_ptr[i].second.first << std::endl;
         }
         
         // flush it to the disk
         close_mmap(over_mmap, 1);
         
+//        std::cout << "====TEST====" << std::endl;
+//        over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
+//        elt_ptr = (pair_type*) over_mmap.mmap_addr;
+//        
+//        
+//        for (size_t i = 0; i < overflow_count_; i++) {
+//            //            overflow_map_.insert(*(elt_ptr + i));
+//            //            std::cout << elt_ptr[i].second.first << std::endl;
+//            std::cout << elt_ptr[i].first << ": \t " << elt_ptr[i].second.first << " ; " /*<< elt_ptr[i].second.second */ << std::endl;
+//        }
+
         // erase the old overflow file and replace it by the temp file
         std::string overflow_path = base_filename_ + "/overflow.bin";
         remove(overflow_path.data());
-        rename(overflow_temp_path.data(), overflow_path.data());
+        
+        assert(rename(overflow_temp_path.data(), overflow_path.data()) == 0);
         
         std::string meta_path = base_filename_ + "/meta.bin";
         mmap_st meta_mmap = create_mmap(meta_path.data(), sizeof(metadata_type));
@@ -544,7 +571,7 @@ private:
         resize_counter_         = meta_ptr->resize_counter;
         e_count_                = meta_ptr->e_count;
         
-        mask_size_ = original_mask_size_ + meta_ptr->bucket_arrays_count;
+        mask_size_ = original_mask_size_ + meta_ptr->bucket_arrays_count -1;
         
         size_t N = 1 << (original_mask_size_);
         
@@ -582,7 +609,7 @@ private:
             throw std::runtime_error("bucket_map constructor: Overflow file does not exist.");
         }
 
-        mmap_st over_mmap = create_mmap(meta_path.data(), (meta_ptr->overflow_count)*sizeof(typename overflow_map_type::value_type));
+        mmap_st over_mmap = create_mmap(overflow_path.data(), (meta_ptr->overflow_count)*sizeof(typename overflow_map_type::value_type));
         
 //        typedef typename overflow_map_type::value_type pair_type;
         typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
@@ -592,7 +619,7 @@ private:
 //            overflow_map_.insert(*(elt_ptr + i));
 //            std::cout << elt_ptr[i].second.first << std::endl;
             append_overflow_bucket(elt_ptr[i].first, elt_ptr[i].second.first, elt_ptr[i].second.second);
-        
+            std::cout << elt_ptr[i].first << ": \t " << elt_ptr[i].second.first << " ; " /*<< elt_ptr[i].second.second */ << std::endl;
         }
         
         overflow_count_         = meta_ptr->overflow_count;

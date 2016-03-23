@@ -96,8 +96,8 @@ void persistency_check(size_t test_size)
     
     std::cout << "Fill the map ..." << std::flush;
     for (size_t i = 0; i < test_size; i++) {
-        uint64_t k = xorshift128();
-        //        uint64_t k = i;
+//        uint64_t k = xorshift128();
+                uint64_t k = i;
         bm->add(k, k);
         ref_map[k] = k;
         //        std::cout << "Added\n";
@@ -115,6 +115,12 @@ void persistency_check(size_t test_size)
         
     }
     
+    uint64_t v;
+    bool s = bm->get(0, v);
+    
+    assert(s);
+    assert(v == 0);
+
     std::cout << " done" << std::endl;
     
     std::cout << "Flush to disk ..." << std::flush;
