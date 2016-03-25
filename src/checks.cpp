@@ -73,7 +73,21 @@ void correctness_check(const std::string &filename, size_t initial_size, size_t 
     }
     
     std::cout << " done\n";
-    
+   
+//    const unsigned long long n = 15155578761338298570;
+//    
+//    uint64_t v;
+//    bool s = bm.get(n, v);
+//    
+//    if ((!s || v != n)) {
+//        if (stop_fail) {
+//            std::cout << "Correctness check failed\n";
+//            return;
+//        }else{
+//            fail_count++;
+//        }
+//    }
+
     size_t count = 0;
     
     if(!systematic_test){ // this test has already been run is systematic_test is set to true
@@ -194,6 +208,16 @@ int main(int argc, const char * argv[]) {
     z = rand() + (((uint64_t)rand()) << 32);
     w = rand() + (((uint64_t)rand()) << 32);
     
+//    x = 2428910474140395302;
+//    y = 8164443984567916509;
+//    z = 745532746363331441;
+//    w = 5974946327640296961;
+    
+    std::cout << "x = " << x << std::endl;
+    std::cout << "y = " << y << std::endl;
+    std::cout << "z = " << z << std::endl;
+    std::cout << "w = " << w << std::endl;
+    
     std::cout << "Pre-cleaning ..." << std::flush;
     
     clean({"correctness_map.dat", "systematic_correctness_map.dat", "persistency_test.dat"});
@@ -201,11 +225,12 @@ int main(int argc, const char * argv[]) {
     std::cout << " done\n\n" << std::endl;
     
     
-    correctness_check("correctness_map.dat", 700, 1<<15, false, false);
+    correctness_check("correctness_map.dat", 1<<16, 1<<15, false, false);
     
-    correctness_check("systematic_correctness_map.dat", 700, 1<<13, true, true);
+//    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
+//    correctness_check("systematic_correctness_map.dat", 700, 4232, true, true);
     
-    persistency_check("persistency_test.dat", 1 << 20);
+//    persistency_check("persistency_test.dat", 1 << 20);
     
     std::cout << "Post-cleaning ..." << std::flush;
     

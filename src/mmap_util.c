@@ -27,6 +27,10 @@ mmap_st create_mmap(const char *pathname, size_t length)
     map.length = 0;
     map.mmap_addr = NULL;
     
+    if (length == 0) {
+        perror("Invalid length");
+        exit(EXIT_FAILURE);
+    }
     map.fd = open(pathname, O_RDWR | O_CREAT, (mode_t)0600); // permissions set to rw-----
     if (map.fd == -1) {
         perror("Error opening file for writing");

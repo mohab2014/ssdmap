@@ -236,6 +236,7 @@ public:
         
         // get the bucket and prefetch it
         auto bucket = get_bucket(coords);
+//        std::cout << "bucket size: " << bucket.size() << std::endl;
 //        bucket.prefetch();
         
         // scan throught the bucket to find the element
@@ -254,6 +255,10 @@ public:
     {
         value_type value(key,v);
         
+//        if (v == 12580438012581768622UL) {
+//            std::cout << "Insert our element\n";
+//        }
+
         // get the bucket index
         size_t h = hf(key);
 
@@ -287,8 +292,33 @@ public:
     
     bool get_overflow_bucket(size_t hkey, mapped_type& v) const
     {
+//#warning Should take into account the resize counter
         
-        auto const it = overflow_map_.find(hkey&((1 << mask_size_)-1));
+        if (hkey == 15155578761338298570UL) {
+//            std::cout << "Overflow bucket search key: " << (hkey&((1 << mask_size_)-1)) << std::endl;
+        }
+        
+        size_t index = (hkey&((1 << mask_size_)-1));
+        
+        if (is_resizing_) {
+            // we must be careful here
+            // the coordinates depend on the value of resize_counter_
+            // if index is less than resize_counter_, it means that the
+            // bucket, before rebuild, was splitted
+            // otherwise, do as before
+            if (index < resize_counter_) {
+                // if the mask_size_-th bit is 0, do as before,
+                // otherwise, recompute the index accordingly
+                
+                if ((hkey & ((1 << mask_size_))) != 0) {
+                    index = (hkey&((1 << (mask_size_+1))-1));
+                    
+                }
+            }
+        }
+
+        
+        auto const it = overflow_map_.find(index);
         
         if (it != overflow_map_.end()) {
             auto const map_it = it->second.find(hkey);
@@ -313,7 +343,7 @@ public:
 
             m.insert(std::make_pair(hkey, v));
             
-            overflow_map_.insert(std::make_pair( hkey&((1 << mask_size_)-1) , m)); // move ????
+            overflow_map_.insert(std::make_pair( bucket_index , m)); // move ????
 
         }
         
@@ -416,6 +446,9 @@ public:
         auto it_old = b.begin();
         
         for (auto it = b.begin(); it != b.end(); ++it) {
+            if (it->first == 15155578761338298570) {
+//                std::cout << "Treat our element\n";
+            }
             if (((it->first) & mask) == 0) { // high order bit of the key is 0
                 // keep it here
                 *it_old = *it;
@@ -453,6 +486,10 @@ public:
             
             // enumerate the bucket's content and try to append the values to the buckets
             for (auto &elt: current_of_bucket) {
+                if (elt.first == 15155578761338298570UL) {
+//                    std::cout << "Treat our element\n";
+                }
+
                 if (((elt.first) & mask) == 0) { // high order bit of the key is 0
                     success = b.append(elt.second);
                     if (!success) { // add the overflow bucket
@@ -494,30 +531,36 @@ public:
         typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
         
         std::string overflow_temp_path = base_filename_ + "/overflow.tmp";
-        mmap_st over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
         
-
-        pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
-        size_t i = 0;
-        
-        for (auto &sub_map : overflow_map_) {
-            // submap is a map
+        if(overflow_count_ > 0){
+            mmap_st over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
             
-            for (auto &x : sub_map.second) {
-                pair_type tmp = std::make_pair(sub_map.first, x);
-                memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
-                i++;
+
+            pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
+            size_t i = 0;
+            
+            for (auto &sub_map : overflow_map_) {
+                // submap is a map
+                
+                for (auto &x : sub_map.second) {
+                    pair_type tmp = std::make_pair(sub_map.first, x);
+                    memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
+                    i++;
+                }
             }
+            
+            // flush it to the disk
+            close_mmap(over_mmap, 1);
         }
-        
-        // flush it to the disk
-        close_mmap(over_mmap, 1);
-        
         // erase the old overflow file and replace it by the temp file
         std::string overflow_path = base_filename_ + "/overflow.bin";
         remove(overflow_path.data());
         
-        assert(rename(overflow_temp_path.data(), overflow_path.data()) == 0);
+        if(overflow_count_ > 0){
+            if (rename(overflow_temp_path.data(), overflow_path.data()) != 0) {
+                throw std::runtime_error("Unable to rename overflow.tmp to overflow.bin");
+            }
+        }
         
         std::string meta_path = base_filename_ + "/meta.bin";
         mmap_st meta_mmap = create_mmap(meta_path.data(), sizeof(metadata_type));
