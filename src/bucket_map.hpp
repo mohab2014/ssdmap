@@ -259,7 +259,6 @@ public:
         
         // get the bucket and prefetch it
         auto bucket = get_bucket(coords);
-//        std::cout << "bucket size: " << bucket.size() << std::endl;
 //        bucket.prefetch();
         
         // scan throught the bucket to find the element
@@ -278,10 +277,6 @@ public:
     {
         value_type value(key,v);
         
-        if (v == 1130534054905073795) {
-//            std::cout << "Insert our element\n";
-        }
-
         // get the bucket index
         size_t h = hf(key);
 
@@ -315,14 +310,8 @@ public:
     
     bool get_overflow_bucket(size_t hkey, mapped_type& v) const
     {
-//#warning Should take into account the resize counter
-        
-        if (hkey == 1130534054905073795) {
-//            std::cout << "Overflow bucket search key: " << (hkey&((1 << mask_size_)-1)) << std::endl;
-        }
-        
         size_t index = get_overflow_bucket_index(hkey);
-                
+        
         auto const it = overflow_map_.find(index);
         
         if (it != overflow_map_.end()) {
@@ -451,9 +440,6 @@ public:
         auto it_old = b.begin();
         
         for (auto it = b.begin(); it != b.end(); ++it) {
-            if (it->first == 1130534054905073795) {
-//                std::cout << "Treat our element\n";
-            }
             if (((it->first) & mask) == 0) { // high order bit of the key is 0
                 // keep it here
                 *it_old = *it;
@@ -491,9 +477,6 @@ public:
             
             // enumerate the bucket's content and try to append the values to the buckets
             for (auto &elt: current_of_bucket) {
-                if (elt.first == 1130534054905073795) {
-//                    std::cout << "Treat our element\n";
-                }
 
                 if (((elt.first) & mask) == 0) { // high order bit of the key is 0
                     success = b.append(elt.second);
@@ -658,9 +641,6 @@ private:
         
         // close the metadata map, no need to flush (we only read it)
         close_mmap(meta_mmap,0);
-        
-        std::cout << "Read bucket space: " << bucket_space_ << std::endl;
-
     }
     
 };
