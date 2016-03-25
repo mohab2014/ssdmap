@@ -208,10 +208,10 @@ int main(int argc, const char * argv[]) {
     z = rand() + (((uint64_t)rand()) << 32);
     w = rand() + (((uint64_t)rand()) << 32);
     
-    x = 4821604254758231733;
-    y = 2889736185279303868;
-    z = 8945159673490801361;
-    w = 4491977415880625016;
+//    x = 4821604254758231733;
+//    y = 2889736185279303868;
+//    z = 8945159673490801361;
+//    w = 4491977415880625016;
     
     std::cout << "x = " << x << std::endl;
     std::cout << "y = " << y << std::endl;
@@ -228,10 +228,10 @@ int main(int argc, const char * argv[]) {
 //    correctness_check("correctness_map.dat", 700, 1<<15, false, false);
     correctness_check("correctness_map.dat", 700, 1<<20, false, false);
     
-//    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
+    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
 //    correctness_check("systematic_correctness_map.dat", 700, 4232, true, true);
     
-//    persistency_check("persistency_test.dat", 1 << 20);
+    persistency_check("persistency_test.dat", 1 << 20);
     
     std::cout << "Post-cleaning ..." << std::flush;
     

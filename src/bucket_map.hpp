@@ -205,6 +205,29 @@ public:
         return std::make_pair(0, h);
     }
     
+    inline size_t get_overflow_bucket_index(size_t h) const
+    {
+        size_t index = (h&((1 << mask_size_)-1));
+        
+        if (is_resizing_) {
+            // we must be careful here
+            // the coordinates depend on the value of resize_counter_
+            // if index is less than resize_counter_, it means that the
+            // bucket, before rebuild, was splitted
+            // otherwise, do as before
+            if (index < resize_counter_) {
+                // if the mask_size_-th bit is 0, do as before,
+                // otherwise, recompute the index accordingly
+                
+                if ((h & ((1 << mask_size_))) != 0) {
+                    return (h&((1 << (mask_size_+1))-1));
+                }
+            }
+        }
+
+        return index;
+    }
+    
     inline bucket_type get_bucket(uint8_t ba_index, size_t b_pos)
     {
         if (ba_index >= bucket_arrays_.size()) {
@@ -298,26 +321,8 @@ public:
 //            std::cout << "Overflow bucket search key: " << (hkey&((1 << mask_size_)-1)) << std::endl;
         }
         
-        size_t index = (hkey&((1 << mask_size_)-1));
-        
-        if (is_resizing_) {
-            // we must be careful here
-            // the coordinates depend on the value of resize_counter_
-            // if index is less than resize_counter_, it means that the
-            // bucket, before rebuild, was splitted
-            // otherwise, do as before
-            if (index < resize_counter_) {
-                // if the mask_size_-th bit is 0, do as before,
-                // otherwise, recompute the index accordingly
+        size_t index = get_overflow_bucket_index(hkey);
                 
-                if ((hkey & ((1 << mask_size_))) != 0) {
-                    index = (hkey&((1 << (mask_size_+1))-1));
-                    
-                }
-            }
-        }
-
-        
         auto const it = overflow_map_.find(index);
         
         if (it != overflow_map_.end()) {
@@ -352,25 +357,7 @@ public:
 
     void append_overflow_bucket(size_t hkey, const value_type& v)
     {        
-        size_t index = (hkey&((1 << mask_size_)-1));
-        
-        if (is_resizing_) {
-            // we must be careful here
-            // the coordinates depend on the value of resize_counter_
-            // if index is less than resize_counter_, it means that the
-            // bucket, before rebuild, was splitted
-            // otherwise, do as before
-            if (index < resize_counter_) {
-                // if the mask_size_-th bit is 0, do as before,
-                // otherwise, recompute the index accordingly
-                
-                if ((hkey & ((1 << mask_size_))) != 0) {
-                    index = (hkey&((1 << (mask_size_+1))-1));
-                    
-                }
-            }
-        }
-
+        size_t index = get_overflow_bucket_index(hkey);
         append_overflow_bucket(index, hkey, v);
     }
     
