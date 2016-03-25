@@ -74,7 +74,7 @@ void correctness_check(const std::string &filename, size_t initial_size, size_t 
     
     std::cout << " done\n";
    
-//    const unsigned long long n = 15155578761338298570;
+//    const unsigned long long n = 1130534054905073795;
 //    
 //    uint64_t v;
 //    bool s = bm.get(n, v);
@@ -208,10 +208,10 @@ int main(int argc, const char * argv[]) {
     z = rand() + (((uint64_t)rand()) << 32);
     w = rand() + (((uint64_t)rand()) << 32);
     
-//    x = 2428910474140395302;
-//    y = 8164443984567916509;
-//    z = 745532746363331441;
-//    w = 5974946327640296961;
+    x = 4821604254758231733;
+    y = 2889736185279303868;
+    z = 8945159673490801361;
+    w = 4491977415880625016;
     
     std::cout << "x = " << x << std::endl;
     std::cout << "y = " << y << std::endl;
@@ -225,7 +225,8 @@ int main(int argc, const char * argv[]) {
     std::cout << " done\n\n" << std::endl;
     
     
-    correctness_check("correctness_map.dat", 1<<16, 1<<15, false, false);
+//    correctness_check("correctness_map.dat", 700, 1<<15, false, false);
+    correctness_check("correctness_map.dat", 700, 1<<20, false, false);
     
 //    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
 //    correctness_check("systematic_correctness_map.dat", 700, 4232, true, true);

@@ -255,9 +255,9 @@ public:
     {
         value_type value(key,v);
         
-//        if (v == 12580438012581768622UL) {
+        if (v == 1130534054905073795) {
 //            std::cout << "Insert our element\n";
-//        }
+        }
 
         // get the bucket index
         size_t h = hf(key);
@@ -294,7 +294,7 @@ public:
     {
 //#warning Should take into account the resize counter
         
-        if (hkey == 15155578761338298570UL) {
+        if (hkey == 1130534054905073795) {
 //            std::cout << "Overflow bucket search key: " << (hkey&((1 << mask_size_)-1)) << std::endl;
         }
         
@@ -351,8 +351,26 @@ public:
     }
 
     void append_overflow_bucket(size_t hkey, const value_type& v)
-    {
-        size_t index = hkey&((1 << mask_size_)-1);
+    {        
+        size_t index = (hkey&((1 << mask_size_)-1));
+        
+        if (is_resizing_) {
+            // we must be careful here
+            // the coordinates depend on the value of resize_counter_
+            // if index is less than resize_counter_, it means that the
+            // bucket, before rebuild, was splitted
+            // otherwise, do as before
+            if (index < resize_counter_) {
+                // if the mask_size_-th bit is 0, do as before,
+                // otherwise, recompute the index accordingly
+                
+                if ((hkey & ((1 << mask_size_))) != 0) {
+                    index = (hkey&((1 << (mask_size_+1))-1));
+                    
+                }
+            }
+        }
+
         append_overflow_bucket(index, hkey, v);
     }
     
@@ -446,7 +464,7 @@ public:
         auto it_old = b.begin();
         
         for (auto it = b.begin(); it != b.end(); ++it) {
-            if (it->first == 15155578761338298570) {
+            if (it->first == 1130534054905073795) {
 //                std::cout << "Treat our element\n";
             }
             if (((it->first) & mask) == 0) { // high order bit of the key is 0
@@ -486,7 +504,7 @@ public:
             
             // enumerate the bucket's content and try to append the values to the buckets
             for (auto &elt: current_of_bucket) {
-                if (elt.first == 15155578761338298570UL) {
+                if (elt.first == 1130534054905073795) {
 //                    std::cout << "Treat our element\n";
                 }
 
@@ -572,7 +590,7 @@ public:
         meta_ptr->overflow_count = overflow_count_;
         meta_ptr->e_count = e_count_;
         meta_ptr->bucket_arrays_count = bucket_arrays_.size();
-        
+                
         close_mmap(meta_mmap,1);
 
         for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
@@ -604,6 +622,7 @@ private:
         
         size_t N = 1 << (original_mask_size_);
         
+        bucket_space_ = 0;
 
         for (uint8_t i = 0; i < meta_ptr->bucket_arrays_count; i++) {
             size_t length = N  * kPageSize;
@@ -624,7 +643,9 @@ private:
                 bucket_space_ += resize_counter_*bucket_arrays_[i].first.bucket_size() * bucket_arrays_[i].first.bucket_count();
             }
 
-            N <<= 1;
+            if (i > 0) {
+                N <<= 1;
+            }
         }
 
         // read the overflow bucket
@@ -650,6 +671,9 @@ private:
         
         // close the metadata map, no need to flush (we only read it)
         close_mmap(meta_mmap,0);
+        
+        std::cout << "Read bucket space: " << bucket_space_ << std::endl;
+
     }
     
 };
