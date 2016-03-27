@@ -344,6 +344,13 @@ public:
         
     }
 
+    /**
+     *  @brief Flush the container to disk.
+     *
+     *  Writes the content of the container, with its metadata to disk, in the directory specified by the constructor.
+     *
+     */
+
     void flush() const
     {
         // flush the data to the disk
@@ -407,9 +414,17 @@ public:
         }
     }
     
+    /**
+     *  @brief Start the online resizing process.
+     *
+     *  Initiates the online resizing by doubling the number of buckets, and setting the necessary flags so that, at every insertion of a new element, kBucketMapResizeStepIterations buckets are splitted in two according to the hashed key value of the contained elements.
+     */
     void start_resize()
     {
-        assert(!is_resizing_);
+        if (is_resizing_) {
+            // Useless call
+            return;
+        }
         
         //        std::cout << "Start resizing!" << std::endl;
         
@@ -431,6 +446,12 @@ public:
         is_resizing_ = true;
     }
     
+    /**
+     *  @brief   Resize the container.
+     * 
+     *  Resizes the container by doubling the number of buckets, and moving the containers elements in the right bucket.
+     *  If the container already was resizing online, this finishes the resizing process.
+     */
     void full_resize()
     {
         if(!is_resizing_)
@@ -443,7 +464,7 @@ public:
         }
     }
 
-protected:
+private:
     inline std::pair<uint8_t, size_t> bucket_coordinates(size_t h) const
     {
         if (is_resizing_) {
@@ -675,7 +696,6 @@ protected:
         bucket_space_ += bucket_arrays_.back().first.bucket_size();
     }
     
-private:
     void init_from_file()
     {
         // start by reading the meta data
