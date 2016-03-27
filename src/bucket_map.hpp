@@ -114,6 +114,10 @@ private:
     bool is_resizing_;
     size_t resize_counter_;
     
+    // hash function and equality predicate
+    hasher hf_;
+    key_equal eql_;
+    
     typedef struct
     {
         uint8_t original_mask_size;
@@ -131,13 +135,18 @@ public:
      *
      *  @param path         The path to the directory where the map will be stored.
      *  @param setup_size   The initial size of the map.
+     *  @param hf           Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
+     Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
+     *  @param eql          Comparison function object, that returns true if the two container object keys passed as arguments are to be considered equal.
+     Member type key_equal is defined in bucket_map as an alias of its fourth template parameter (Pred).
      *
      *  If a valid input directory is given by the constructor, the data structure will be initialized from its content.
      *  Otherwise, a new structure will be initialized, such that it is able to contain @a setup_size elements.
      *
      */
-    bucket_map(const std::string &path, const size_type setup_size)
-    : base_filename_(path), e_count_(0), overflow_count_(0), overflow_map_(), bucket_arrays_(), is_resizing_(false)
+    bucket_map(const std::string &path, const size_type setup_size, const hasher& hf = hasher(),
+               const key_equal& eql = key_equal())
+    : base_filename_(path), e_count_(0), overflow_count_(0), overflow_map_(), bucket_arrays_(), is_resizing_(false), hf_(hf), eql_(eql)
     {
 
         // check is there already is a directory at path
@@ -326,20 +335,14 @@ public:
                             Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
      *  @param[out] v       A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
                             If @a key is found, the mapped value will be put in @a v.
-     *  @param[in] hf       The hash function used to retrieve the element mapped to @a key. Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
-     Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
-
-     *  @param[in] eql      The equality predicate used to retrive the element mapped to @a key. Comparison function object, that returns true if the two container object keys passed as arguments are to be considered equal.
-     Member type key_equal is defined in bucket_map as an alias of its fourth template parameter (Pred).
-
      
      *  @retval true    if @a key was found
      *  @retval false   if @a key was not found
      
      */
-    bool get(key_type key, mapped_type& v, const hasher& hf = hasher(), const key_equal& eql = key_equal())
+    bool get(key_type key, mapped_type& v)
     {
-        size_t h = hf(key);
+        size_t h = hf_(key);
 
         // first, look if it is not in the overflow map
 
@@ -358,7 +361,7 @@ public:
         
         // scan throught the bucket to find the element
         for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-            if(eql(it->first, key))
+            if(eql_(it->first, key))
             {
                 v = it->second;
                 return true;
@@ -379,12 +382,12 @@ public:
      *  @param[in] hf       The hash function used to insert the newly inserted element. Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
      Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
     */
-    void add(key_type key, const mapped_type& v, const hasher& hf = hasher())
+    void add(key_type key, const mapped_type& v)
     {
         value_type value(key,v);
         
         // get the bucket index
-        size_t h = hf(key);
+        size_t h = hf_(key);
 
         // get the appropriate coordinates
         std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
