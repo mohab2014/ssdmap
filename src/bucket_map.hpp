@@ -6,6 +6,14 @@
 //  Copyright © 2016 Raphael Bost. All rights reserved.
 //
 
+/** @file bucket_map.hpp
+ * @brief Header that defines the bucket_map container class.
+ *
+ *
+ */
+
+
+
 #pragma once
 
 #include "bucket_array.hpp"
@@ -25,25 +33,55 @@
 
 namespace ssdmap {
     
+   
+constexpr float kBucketMapResizeThresholdLoad = 0.85; /**< @brief Maximum load of the map. */
+constexpr size_t kBucketMapResizeMaxOverflowSize = 1e5; /**< @brief Maximum size of the overflow bucket. */
+constexpr float kBucketMapResizeMaxOverflowRatio = 0.1; /**< @brief Maximum value of the ratio between the size of the overflow bucket and the size of the map. */
+constexpr size_t kBucketMapResizeStepIterations = 4; /**< @brief Number of buckets rebuilt at every insertion during the rebuild phase.  */
+
+constexpr size_t kPageSize = 512; /**< @brief Size (in bytes) of a bucket. */
+
     
+/** @class bucket_map
+ *  @brief An on-disk associative map implementation allowing for fast retrieval
+ and efficient updates.
+ *
+ *  In a bucket_map, the key value is used to uniquely identify the elements. 
+ *  The elements are put in 2^mask_size buckets: the key-value pair (k,v) is put in bucket truncate( h(k), mask_size) (the last mask_size bits of h(k)).
+ *  Inside each bucket, the elements are organized as an unordered list. 
+ *  When a bucket is full, any additionally inserted element is put in an overflow bucket.
+ *  Deletion are not supported.
+ *
+ *  bucket_map are stored on disk, in a directory specified in the constructor.
+ *  The organisation of the directory is as follows: a metadata.bin files contains all the necessary metadata needed by the data structure, such as the overflow bucket size, the number of inserted elements, the mask size, or a flag signaling if the structure is resizing; an overflow.bin file encodes the overflow bucket (if non empty), and data.* files encode the data structure itself.
+ *  No integrity check is performed when reading from an input directory.
+ *
+ *  @tparam Key     Type of the key values. Each element in a bucket_map is uniquely identified by its key value.
+ Aliased as member type bucket_map::key_type.
+ *
+ *  @tparam T       Type of the mapped value. Each element in an bucket_map is used to store some data as its mapped value.
+ Aliased as member type bucket_map::mapped_type. Note that this is not the same as bucket_map::value_type (see below).
+ *
+ *  @tparam Hash    A unary function object type that takes an object of type key type as argument and returns a unique value of type size_t based on it. This can either be a class implementing a function call operator or a pointer to a function (see constructor for an example). This defaults to hash<Key>, which returns a hash value with a probability of collision approaching 1.0/std::numeric_limits<size_t>::max().
+ The unordered_map object uses the hash values returned by this function to organize its elements internally, speeding up the process of locating individual elements.
+ Aliased as member type bucket_map::hasher.
+ *
+ *  @tparam Pred    A binary predicate that takes two arguments of the key type and returns a bool. The expression pred(a,b), where pred is an object of this type and a and b are key values, shall return true if a is to be considered equivalent to b. This can either be a class implementing a function call operator or a pointer to a function (see constructor for an example). This defaults to equal_to<Key>, which returns the same as applying the equal-to operator (a==b).
+ The unordered_map object uses this expression to determine whether two element keys are equivalent. No two elements in an unordered_map container can have keys that yield true using this predicate.
+ Aliased as member type unordered_map::key_equal.
 
-constexpr float kBucketMapResizeThresholdLoad = 0.85;
-constexpr size_t kBucketMapResizeMaxOverflowSize = 1e5; // no more than 1e5 elements in the overflow bucket
-constexpr float kBucketMapResizeMaxOverflowRatio = 0.1; // no more than 10% of elements in the overflow bucket
-constexpr size_t kBucketMapResizeStepIterations = 4;
-
-constexpr size_t kPageSize = 512;
-
+ */
+    
 template <class Key, class T, class Hash = std::hash<Key>, class Pred = std::equal_to<Key>>
 class bucket_map {
 public:
-    typedef Key                                                        key_type;
-    typedef T                                                          mapped_type;
-    typedef Hash                                                       hasher;
-    typedef Pred                                                       key_equal;
-    typedef std::pair<const key_type, mapped_type>                     value_type;
-    typedef value_type&                                                reference;
-    typedef const value_type&                                          const_reference;
+    typedef Key                                                        key_type;        /**< @brief The first template parameter (Key)	*/
+    typedef T                                                          mapped_type;     /**< @brief The second template parameter (T)	*/
+    typedef Hash                                                       hasher;          /**< @brief The third template parameter (Hash)	*/
+    typedef Pred                                                       key_equal;       /**< @brief The fourth template parameter (Pred)*/
+    typedef std::pair<const key_type, mapped_type>                     value_type;      /**< @brief pair<const key_type,mapped_type>	*/
+    typedef value_type&                                                reference;       /**< @brief value_type&	*/
+    typedef const value_type&                                          const_reference; /**< @brief const value_type&	*/
 
     typedef size_t          size_type;
     typedef ptrdiff_t       difference_type;
@@ -56,7 +94,6 @@ public:
     typedef std::unordered_map<size_t, value_type>                  overflow_submap_type;
     typedef std::unordered_map<size_t, overflow_submap_type>           overflow_map_type;
 private:
-//    std::unordered_map<key_type, mapped_type, hasher, key_equal> overflow_map_;
     overflow_map_type overflow_map_;
     
     std::vector<std::pair<bucket_array_type, mmap_st> > bucket_arrays_;
@@ -89,7 +126,17 @@ private:
 
 public:
     
-    bucket_map(const std::string &path, const size_type setup_size, const hasher& hf = hasher(), const key_equal& eql = key_equal())
+    /** 
+     *  @brief Constructor
+     *
+     *  @param path         The path to the directory where the map will be stored.
+     *  @param setup_size   The initial size of the map.
+     *
+     *  If a valid input directory is given by the constructor, the data structure will be initialized from its content.
+     *  Otherwise, a new structure will be initialized, such that it is able to contain @a setup_size elements.
+     *
+     */
+    bucket_map(const std::string &path, const size_type setup_size)
     : base_filename_(path), e_count_(0), overflow_count_(0), overflow_map_(), bucket_arrays_(), is_resizing_(false)
     {
 
@@ -126,8 +173,6 @@ public:
 
             size_t length = N  * kPageSize;
             
-    //        base_filename_ = "bucket_map.bin";
-            
             std::ostringstream string_stream;
             string_stream << base_filename_ << "/data." << std::dec << 0;
             
@@ -138,31 +183,70 @@ public:
         }
     }
     
+    
+    /**
+     *  @brief Destructor
+     *
+     *  The destructor also flushes the data structure to the disk,and this may take some time.
+     */
+    
     ~bucket_map()
     {
         flush();
     }
     
+    /**
+     *  @brief Return container size.
+     *
+     *  Returns the number of elements in the bucket_map container.
+     *
+     *  @return The number of elements in the container.
+     */
     inline size_t size() const
     {
         return e_count_;
     }
     
+    
+    /**
+     *  @brief Return container load.
+     *
+     *  Returns the load of the bucket_map container defined as the ratio between the number of elements of the container, and the maximum number of elements is can contain (without accounting for the overflow bucket).
+     *
+     *  @return The load of the container.
+     */
     inline float load() const
     {
         return ((float)e_count_)/(bucket_space_);
     }
     
+    /**
+     *  @brief Return overflow bucket size.
+     *
+     *  Returns the number of elements in the bucket_map overflow bucket.
+     *
+     *  @return The number of elements in the overflow bucket.
+     */
+
     inline size_t overflow_size() const
     {
         return overflow_count_;
     }
     
+    /**
+     *  @brief Return container overflow ration.
+     *
+     *  Returns the overflow ration of the bucket_map container defined as the ratio between the number of elements in the overflow bucket, and the number of elements in the container.
+     *
+     *  @return The overflow ration of the container.
+     */
+
     inline float overflow_ratio() const
     {
         return ((float)overflow_count_)/(e_count_);
     }
     
+protected:
     inline std::pair<uint8_t, size_t> bucket_coordinates(size_t h) const
     {
         if (is_resizing_) {
@@ -232,6 +316,27 @@ public:
         return get_bucket(p.first, p.second);
     }
 
+public:
+    /**
+     *  @brief Access element
+     * 
+     * Retrieves the element with key @a key, puts it in @a v and return true if found, and just returns false otherwise.
+     * 
+     *  @param[in]  key     Key to be searched for.
+                            Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
+     *  @param[out] v       A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
+                            If @a key is found, the mapped value will be put in @a v.
+     *  @param[in] hf       The hash function used to retrieve the element mapped to @a key. Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
+     Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
+
+     *  @param[in] eql      The equality predicate used to retrive the element mapped to @a key. Comparison function object, that returns true if the two container object keys passed as arguments are to be considered equal.
+     Member type key_equal is defined in bucket_map as an alias of its fourth template parameter (Pred).
+
+     
+     *  @retval true    if @a key was found
+     *  @retval false   if @a key was not found
+     
+     */
     bool get(key_type key, mapped_type& v, const hasher& hf = hasher(), const key_equal& eql = key_equal())
     {
         size_t h = hf(key);
@@ -263,6 +368,17 @@ public:
         return false;
     }
     
+    /**
+     *  @brief Insert element
+     *
+     *  Add the element with key @a key and value @a v in the data structure.
+     *
+     *  @param[in]  key     Key of the element to be inserted.
+     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
+     *  @param[in] v        Value of the element to be inserted. A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
+     *  @param[in] hf       The hash function used to insert the newly inserted element. Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
+     Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
+    */
     void add(key_type key, const mapped_type& v, const hasher& hf = hasher())
     {
         value_type value(key,v);

@@ -43,6 +43,7 @@
 		31D08A521C9B1AD600B57FF7 /* mmap_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mmap_util.c; path = src/mmap_util.c; sourceTree = SOURCE_ROOT; };
 		31D08A531C9B1AD600B57FF7 /* mmap_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mmap_util.h; path = src/mmap_util.h; sourceTree = SOURCE_ROOT; };
 		31D68DA21C9F417B008B511D /* bucket_map.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = bucket_map.hpp; path = src/bucket_map.hpp; sourceTree = SOURCE_ROOT; };
+		6C150EC61CA8A02700569EDE /* Doxyfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = Doxyfile; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +67,7 @@
 		31D08A3F1C9B1AC200B57FF7 = {
 			isa = PBXGroup;
 			children = (
+				6C150EC61CA8A02700569EDE /* Doxyfile */,
 				31D08A4A1C9B1AC200B57FF7 /* src */,
 				31D08A491C9B1AC200B57FF7 /* Products */,
 			);
@@ -305,6 +307,7 @@
 				314E50881CA356BE00400E6D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		31D08A431C9B1AC200B57FF7 /* Build configuration list for PBXProject "ssdmap" */ = {
 			isa = XCConfigurationList;
