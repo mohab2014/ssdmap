@@ -255,6 +255,194 @@ public:
         return ((float)overflow_count_)/(e_count_);
     }
     
+    /**
+     *  @brief Access element
+     *
+     * Retrieves the element with key @a key, puts it in @a v and return true if found, and just returns false otherwise.
+     *
+     *  @param[in]  key     Key to be searched for.
+     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
+     *  @param[out] v       A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
+     If @a key is found, the mapped value will be put in @a v.
+     
+     *  @retval true    if @a key was found
+     *  @retval false   if @a key was not found
+     
+     */
+    bool get(key_type key, mapped_type& v)
+    {
+        size_t h = hf_(key);
+        
+        // first, look if it is not in the overflow map
+        
+        if (get_overflow_bucket(h, v)) {
+            return true;
+        }
+        
+        // otherwise, get the bucket index
+        
+        // get the appropriate coordinates
+        std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
+        
+        // get the bucket and prefetch it
+        auto bucket = get_bucket(coords);
+        //        bucket.prefetch();
+        
+        // scan throught the bucket to find the element
+        for (auto it = bucket.begin(); it != bucket.end(); ++it) {
+            if(eql_(it->first, key))
+            {
+                v = it->second;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     *  @brief Insert element
+     *
+     *  Add the element with key @a key and value @a v in the data structure.
+     *
+     *  @param[in]  key     Key of the element to be inserted.
+     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
+     *  @param[in] v        Value of the element to be inserted. A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
+     */
+    void add(key_type key, const mapped_type& v)
+    {
+        value_type value(key,v);
+        
+        // get the bucket index
+        size_t h = hf_(key);
+        
+        // get the appropriate coordinates
+        std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
+        
+        // try to append the value to the bucket
+        auto bucket = get_bucket(coords);
+        
+        bool success = bucket.append(value);
+        
+        if (!success) {
+            // add to the overflow bucket
+            append_overflow_bucket(h, value);
+            
+            
+            //            std::cout << "Full bucket. " << size() << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_size() << ", overflow proportion: " << overflow_ratio() << "\n" << std::endl;
+        }
+        
+        e_count_++;
+        
+        if (is_resizing_) {
+            online_resize();
+        }else{
+            if (should_resize()) {
+                start_resize();
+            }
+        }
+        
+    }
+
+    void flush() const
+    {
+        // flush the data to the disk
+        
+        // start by syncing the bucket arrays
+        // do it asynchronously for now
+        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
+            flush_mmap(it->second,ASYNCFLAG);
+        }
+        
+        // create a new memory map for the overflow bucket
+        typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
+        
+        std::string overflow_temp_path = base_filename_ + "/overflow.tmp";
+        
+        if(overflow_count_ > 0){
+            mmap_st over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
+            
+            
+            pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
+            size_t i = 0;
+            
+            for (auto &sub_map : overflow_map_) {
+                // submap is a map
+                
+                for (auto &x : sub_map.second) {
+                    pair_type tmp = std::make_pair(sub_map.first, x);
+                    memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
+                    i++;
+                }
+            }
+            
+            // flush it to the disk
+            close_mmap(over_mmap, 1);
+        }
+        // erase the old overflow file and replace it by the temp file
+        std::string overflow_path = base_filename_ + "/overflow.bin";
+        remove(overflow_path.data());
+        
+        if(overflow_count_ > 0){
+            if (rename(overflow_temp_path.data(), overflow_path.data()) != 0) {
+                throw std::runtime_error("Unable to rename overflow.tmp to overflow.bin");
+            }
+        }
+        
+        std::string meta_path = base_filename_ + "/meta.bin";
+        mmap_st meta_mmap = create_mmap(meta_path.data(), sizeof(metadata_type));
+        metadata_type *meta_ptr = (metadata_type *)meta_mmap.mmap_addr;
+        
+        meta_ptr->original_mask_size = original_mask_size_;
+        meta_ptr->is_resizing = is_resizing_;
+        meta_ptr->resize_counter = resize_counter_;
+        meta_ptr->overflow_count = overflow_count_;
+        meta_ptr->e_count = e_count_;
+        meta_ptr->bucket_arrays_count = bucket_arrays_.size();
+        
+        close_mmap(meta_mmap,1);
+        
+        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
+            close_mmap(it->second,1);
+        }
+    }
+    
+    void start_resize()
+    {
+        assert(!is_resizing_);
+        
+        //        std::cout << "Start resizing!" << std::endl;
+        
+        // create a new bucket_array of double the size of the previous one
+        
+        size_t ba_count = bucket_arrays_.size();
+        
+        size_t N = 1 << (mask_size_);
+        
+        size_t length = N  * kPageSize;
+        
+        std::ostringstream string_stream;
+        string_stream << base_filename_ << "/data." << std::dec << ba_count;
+        
+        mmap_st mmap = create_mmap(string_stream.str().data(),length);
+        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
+        
+        resize_counter_ = 0;
+        is_resizing_ = true;
+    }
+    
+    void full_resize()
+    {
+        if(!is_resizing_)
+        {
+            start_resize();
+        }
+        
+        for (; is_resizing_; ) {
+            resize_step();
+        }
+    }
+
 protected:
     inline std::pair<uint8_t, size_t> bucket_coordinates(size_t h) const
     {
@@ -325,97 +513,6 @@ protected:
         return get_bucket(p.first, p.second);
     }
 
-public:
-    /**
-     *  @brief Access element
-     * 
-     * Retrieves the element with key @a key, puts it in @a v and return true if found, and just returns false otherwise.
-     * 
-     *  @param[in]  key     Key to be searched for.
-                            Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
-     *  @param[out] v       A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
-                            If @a key is found, the mapped value will be put in @a v.
-     
-     *  @retval true    if @a key was found
-     *  @retval false   if @a key was not found
-     
-     */
-    bool get(key_type key, mapped_type& v)
-    {
-        size_t h = hf_(key);
-
-        // first, look if it is not in the overflow map
-
-        if (get_overflow_bucket(h, v)) {
-            return true;
-        }
-        
-        // otherwise, get the bucket index
-        
-        // get the appropriate coordinates
-        std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
-        
-        // get the bucket and prefetch it
-        auto bucket = get_bucket(coords);
-//        bucket.prefetch();
-        
-        // scan throught the bucket to find the element
-        for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-            if(eql_(it->first, key))
-            {
-                v = it->second;
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     *  @brief Insert element
-     *
-     *  Add the element with key @a key and value @a v in the data structure.
-     *
-     *  @param[in]  key     Key of the element to be inserted.
-     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
-     *  @param[in] v        Value of the element to be inserted. A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
-     *  @param[in] hf       The hash function used to insert the newly inserted element. Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
-     Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
-    */
-    void add(key_type key, const mapped_type& v)
-    {
-        value_type value(key,v);
-        
-        // get the bucket index
-        size_t h = hf_(key);
-
-        // get the appropriate coordinates
-        std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
-
-        // try to append the value to the bucket
-        auto bucket = get_bucket(coords);
-        
-        bool success = bucket.append(value);
-        
-        if (!success) {
-            // add to the overflow bucket
-            append_overflow_bucket(h, value);
-            
-            
-//            std::cout << "Full bucket. " << size() << " elements (load factor " << load() << ")\n size of overflow bucket: " << overflow_size() << ", overflow proportion: " << overflow_ratio() << "\n" << std::endl;
-        }
-        
-        e_count_++;
-        
-        if (is_resizing_) {
-            online_resize();
-        }else{
-            if (should_resize()) {
-                start_resize();
-            }
-        }
-
-    }
     
     bool get_overflow_bucket(size_t hkey, mapped_type& v) const
     {
@@ -480,30 +577,6 @@ public:
         return false;
     }
     
-    void start_resize()
-    {
-        assert(!is_resizing_);
-        
-//        std::cout << "Start resizing!" << std::endl;
-        
-        // create a new bucket_array of double the size of the previous one
-        
-        size_t ba_count = bucket_arrays_.size();
-        
-        size_t N = 1 << (mask_size_);
-        
-        size_t length = N  * kPageSize;
-        
-        std::ostringstream string_stream;
-        string_stream << base_filename_ << "/data." << std::dec << ba_count;
-
-        mmap_st mmap = create_mmap(string_stream.str().data(),length);
-        bucket_arrays_.push_back(std::make_pair(bucket_array_type(mmap.mmap_addr, N, kPageSize), mmap));
-
-        resize_counter_ = 0;
-        is_resizing_ = true;
-    }
-    
     void finalize_resize()
     {
         mask_size_++;
@@ -517,18 +590,6 @@ public:
     void online_resize()
     {
         for (size_t i = 0; i < kBucketMapResizeStepIterations && is_resizing_; i++) {
-            resize_step();
-        }
-    }
-    
-    void full_resize()
-    {
-        if(!is_resizing_)
-        {
-            start_resize();
-        }
-        
-        for (; is_resizing_; ) {
             resize_step();
         }
     }
@@ -614,68 +675,6 @@ public:
         bucket_space_ += bucket_arrays_.back().first.bucket_size();
     }
     
-    void flush() const
-    {
-        // flush the data to the disk
-        
-        // start by syncing the bucket arrays
-        // do it asynchronously for now
-        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
-            flush_mmap(it->second,ASYNCFLAG);
-        }
-        
-        // create a new memory map for the overflow bucket
-        typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
-        
-        std::string overflow_temp_path = base_filename_ + "/overflow.tmp";
-        
-        if(overflow_count_ > 0){
-            mmap_st over_mmap = create_mmap(overflow_temp_path.data(), overflow_count_*sizeof(pair_type));
-            
-
-            pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
-            size_t i = 0;
-            
-            for (auto &sub_map : overflow_map_) {
-                // submap is a map
-                
-                for (auto &x : sub_map.second) {
-                    pair_type tmp = std::make_pair(sub_map.first, x);
-                    memcpy(elt_ptr+i, &tmp, sizeof(pair_type));
-                    i++;
-                }
-            }
-            
-            // flush it to the disk
-            close_mmap(over_mmap, 1);
-        }
-        // erase the old overflow file and replace it by the temp file
-        std::string overflow_path = base_filename_ + "/overflow.bin";
-        remove(overflow_path.data());
-        
-        if(overflow_count_ > 0){
-            if (rename(overflow_temp_path.data(), overflow_path.data()) != 0) {
-                throw std::runtime_error("Unable to rename overflow.tmp to overflow.bin");
-            }
-        }
-        
-        std::string meta_path = base_filename_ + "/meta.bin";
-        mmap_st meta_mmap = create_mmap(meta_path.data(), sizeof(metadata_type));
-        metadata_type *meta_ptr = (metadata_type *)meta_mmap.mmap_addr;
-
-        meta_ptr->original_mask_size = original_mask_size_;
-        meta_ptr->is_resizing = is_resizing_;
-        meta_ptr->resize_counter = resize_counter_;
-        meta_ptr->overflow_count = overflow_count_;
-        meta_ptr->e_count = e_count_;
-        meta_ptr->bucket_arrays_count = bucket_arrays_.size();
-                
-        close_mmap(meta_mmap,1);
-
-        for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
-            close_mmap(it->second,1);
-        }
-    }
 private:
     void init_from_file()
     {
