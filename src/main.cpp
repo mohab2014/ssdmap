@@ -17,6 +17,7 @@
 #include "bucket_array.hpp"
 #include "bucket_map.hpp"
 
+using namespace ssdmap;
 
 static uint64_t x=123456789, y=362436069, z=521288629, w=314159;
 

@@ -30,6 +30,9 @@
   sizeof(T)															 		 sizeof(C)
  */
 
+namespace ssdmap {
+    
+    
 template <class T, class C = uint16_t>
 class bucket_array {
 public:
@@ -241,3 +244,5 @@ private:
     const counter_type bucket_size_;
     const size_type page_size_;
 };
+
+} // namespace ssdmap

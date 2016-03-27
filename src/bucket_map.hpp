@@ -23,19 +23,9 @@
 #include <cassert>
 #include <sys/stat.h>
 
-uint8_t log2llu(size_t x)
-{
-    uint8_t c = 8*sizeof(size_t) - 1;
-    size_t mask = (1 << (c));
+namespace ssdmap {
     
-    for ( ; c > 0; c--, mask >>= 1) {
-        if ((x & mask) != 0) {
-            return c;
-        }
-    }
     
-    return 0;
-}
 
 constexpr float kBucketMapResizeThresholdLoad = 0.85;
 constexpr size_t kBucketMapResizeMaxOverflowSize = 1e5; // no more than 1e5 elements in the overflow bucket
@@ -644,3 +634,5 @@ private:
     }
     
 };
+
+} // namespace ssdmap
