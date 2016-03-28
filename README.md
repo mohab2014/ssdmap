@@ -14,6 +14,7 @@ Three targets can be built:
 
 * `lib`: the compiled library. It produces both the static and the shared versions of `libssdmap`, copied in the directory `library/lib`, together with the headers in `library/include`. If possible, unit tests are run before constructing the library.
 
+* `doc`: the documentation. Generates the documentation using doxygen (you need doxygen installed on the host).
 
 To build the library, just enter in your terminal
 ``scons lib ``.

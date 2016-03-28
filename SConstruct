@@ -67,6 +67,9 @@ Alias('lib', [shared_lib, static_lib] + headers_lib)
 # Alias('lib', [lib_install] + headers_lib)
 
 
+doc = env.Command('html', [], 'doxygen')
+env.AlwaysBuild(doc)
+env.Alias('doc', [doc])
 
 test_env = env.Clone()
     
