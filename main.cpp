@@ -23,6 +23,7 @@
 #include <fstream>
 
 #include <ftw.h>
+#include <unistd.h>
 #include <chrono>
 #include <vector>
 
@@ -126,7 +127,7 @@ rm( const char *path, const struct stat *s, int flag, struct FTW *f )
 void clean(const std::list<std::string> &file_list)
 {
     for (auto &fn : file_list) {
-        nftw( fn.data(), rm, OPEN_MAX, FTW_DEPTH );
+        nftw( fn.data(), rm, 2, FTW_DEPTH );
     }
 }
 

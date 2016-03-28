@@ -120,37 +120,3 @@ int close_mmap(mmap_st map)
     
     return ret;
 }
-
-int destroy_mmap(mmap_st map)
-{
-    int ret = 0;
-    
-    // unmap first
-    if (munmap(map.mmap_addr, map.length) == -1) {
-        perror("Error un-mmapping the file");
-        /* Decide here whether to close(fd) and exit() or not. Depends... */
-        ret = -1;
-    }
-    
-    // get the path
-    char file_path[MAXPATHLEN];
-    
-    int ret2 = fcntl(map.fd, F_GETPATH, file_path);
-    
-
-    // close the file descriptor
-    close(map.fd);
-    
-    // delete the file
-    if (ret2 != -1) {
-        if (remove(file_path)) {
-            perror("Error deleting the mmap file.");
-            ret += -1;
-        }
-    }else{
-        perror("Unable to get the mmap file path.");
-        ret += -1;
-    }
-    
-    return ret;
-}

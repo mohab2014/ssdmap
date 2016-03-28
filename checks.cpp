@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <ftw.h>
+#include <unistd.h>
 
 #include "mmap_util.h"
 #include "bucket_array.hpp"
@@ -188,7 +189,7 @@ rm( const char *path, const struct stat *s, int flag, struct FTW *f )
         default:     rm_func = unlink; break;
         case FTW_DP: rm_func = rmdir;
     }
-    rm_func( path );
+    status = rm_func( path );
     
     return status;
 }
@@ -196,7 +197,7 @@ rm( const char *path, const struct stat *s, int flag, struct FTW *f )
 void clean(const std::list<std::string> &file_list)
 {
     for (auto &fn : file_list) {
-        nftw( fn.data(), rm, OPEN_MAX, FTW_DEPTH );
+        nftw( fn.data(), rm, 2, FTW_DEPTH );
     }
 }
 

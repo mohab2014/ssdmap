@@ -41,6 +41,7 @@
 #include <sstream>
 
 #include <cmath>
+#include <cstring>
 #include <cassert>
 #include <sys/stat.h>
 

@@ -25,6 +25,7 @@
 #include <sys/mman.h>
 
 #include <exception>
+#include <stdexcept>
 
 /** @file bucket_array.hpp
  * @brief Header that defines the bucket_array representation class.

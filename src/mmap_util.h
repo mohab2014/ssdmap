@@ -93,20 +93,6 @@ int flush_mmap(mmap_st map, flush_flag sync_flag);
  */
 int close_mmap(mmap_st);
     
-
-/**
- *  @brief Destroy a memory map.
- *
- *  Unmaps the memory map and closes the associated file descriptor, an removes the file. 
- *  
- *  @remark When unmapped, the memory is flushed to the file, even though it is unnecessary here.
- *
- *  @param  map         The mmap_st structure representing a memory map.
- *
- *  @return zero on success, -1 on error.
- */
-int destroy_mmap(mmap_st map);
-
     
 #ifdef __cplusplus
 }

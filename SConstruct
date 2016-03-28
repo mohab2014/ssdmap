@@ -11,7 +11,6 @@ except:
 if FindFile('config.scons', '.'):
     SConscript('config.scons', exports='env')
     
-env.Append(CFLAGS=['-std=c99'])
 env.Append(CCFLAGS=['-Wall', '-march=native', '-maes', '-fPIC'])
 env.Append(CXXFLAGS=['-std=c++11'])
 
