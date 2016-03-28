@@ -81,11 +81,11 @@ mmap_st create_mmap(const char *pathname, size_t length)
     return map;
 }
 
-int flush_mmap(mmap_st map, uint8_t sync_flag)
+int flush_mmap(mmap_st map, flush_flag sync_flag)
 {
     int ret;
     
-    ret = msync(map.mmap_addr, map.length, ((sync_flag == ASYNCFLAG) ? MS_ASYNC : MS_SYNC));
+    ret = msync(map.mmap_addr, map.length, ((sync_flag == ASYNC_FLAG) ? MS_ASYNC : MS_SYNC));
     
     if (ret == -1) {
         perror("Error syncing the map.");
@@ -94,57 +94,51 @@ int flush_mmap(mmap_st map, uint8_t sync_flag)
     return ret;
 }
 
-int close_mmap(mmap_st map, uint8_t flush)
+int close_mmap(mmap_st map)
 {
-    int ret;
-    
-    if (flush) {
-        ret = flush_mmap(map, SYNCFLAG);
-        if (ret == -1) {
-            perror("Error syncing the map.");
-            
-//            exit(EXIT_FAILURE);
-        }
-    }
-    
+    int ret = 0;
     if (munmap(map.mmap_addr, map.length) == -1) {
         perror("Error un-mmapping the file");
+        ret = -1;
         /* Decide here whether to close(fd) and exit() or not. Depends... */
     }
 
     // close the file descriptor
-    close(map.fd);
+    ret += close(map.fd);
     
-    return 0;
+    return ret;
 }
 
 int destroy_mmap(mmap_st map)
 {
-    int ret;
+    int ret = 0;
     
     // unmap first
     if (munmap(map.mmap_addr, map.length) == -1) {
         perror("Error un-mmapping the file");
         /* Decide here whether to close(fd) and exit() or not. Depends... */
+        ret = -1;
     }
     
     // get the path
     char file_path[MAXPATHLEN];
     
-    ret = fcntl(map.fd, F_GETPATH, file_path);
+    int ret2 = fcntl(map.fd, F_GETPATH, file_path);
     
 
     // close the file descriptor
     close(map.fd);
     
     // delete the file
-    if (ret != -1) {
+    if (ret2 != -1) {
         if (remove(file_path)) {
             perror("Error deleting the mmap file.");
+            ret += -1;
         }
     }else{
         perror("Unable to get the mmap file path.");
+        ret += -1;
     }
     
-    return 0;
+    return ret;
 }

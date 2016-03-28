@@ -358,7 +358,7 @@ public:
         // start by syncing the bucket arrays
         // do it asynchronously for now
         for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
-            flush_mmap(it->second,ASYNCFLAG);
+            flush_mmap(it->second,ASYNC_FLAG);
         }
         
         // create a new memory map for the overflow bucket
@@ -384,7 +384,7 @@ public:
             }
             
             // flush it to the disk
-            close_mmap(over_mmap, 1);
+            close_mmap(over_mmap);
         }
         // erase the old overflow file and replace it by the temp file
         std::string overflow_path = base_filename_ + "/overflow.bin";
@@ -407,10 +407,10 @@ public:
         meta_ptr->e_count = e_count_;
         meta_ptr->bucket_arrays_count = bucket_arrays_.size();
         
-        close_mmap(meta_mmap,1);
+        close_mmap(meta_mmap);
         
         for (auto it = bucket_arrays_.rbegin(); it != bucket_arrays_.rend(); ++it) {
-            close_mmap(it->second,1);
+            close_mmap(it->second);
         }
     }
     
@@ -764,11 +764,11 @@ private:
         
         overflow_count_         = meta_ptr->overflow_count;
 
-        // close the overflow mmap, no need to flush (we only read it)
-        close_mmap(over_mmap,0);
+        // close the overflow mmap
+        close_mmap(over_mmap);
         
-        // close the metadata map, no need to flush (we only read it)
-        close_mmap(meta_mmap,0);
+        // close the metadata map
+        close_mmap(meta_mmap);
     }
     
 };
