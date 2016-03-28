@@ -105,7 +105,7 @@ rm( const char *path, const struct stat *s, int flag, struct FTW *f )
         default:     rm_func = unlink; break;
         case FTW_DP: rm_func = rmdir;
     }
-    rm_func( path );
+    status = rm_func( path );
     
     return status;
 }

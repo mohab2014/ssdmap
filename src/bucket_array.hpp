@@ -267,7 +267,7 @@ public:
      *  @exception std::runtime_error("Invalid bucket size.") The range of the bucket cannot be addressed with the counter_type.
      */
     inline bucket_array(void* ptr, const size_type N, const_counter_ref bucket_size, const size_t& page_size) :
-    mem_(static_cast<unsigned char*>(ptr)), N_(N), bucket_size_(bucket_size), page_size_(page_size)
+     N_(N), mem_(static_cast<unsigned char*>(ptr)), bucket_size_(bucket_size), page_size_(page_size)
     {
         // check that the page can contain bucket_size_ elements plus a counter
         if(bucket_size_*sizeof(value_type)+sizeof(counter_type) >  page_size_)
@@ -294,7 +294,7 @@ public:
      *  @exception std::runtime_error("Invalid bucket size.") The range of the bucket cannot be addressed with the counter_type.
      */
     inline bucket_array(void* ptr, const size_type N, const size_t& page_size) :
-    mem_(static_cast<unsigned char*>(ptr)), N_(N), bucket_size_((page_size - sizeof(counter_type))/sizeof(value_type)), page_size_(page_size)
+    N_(N), mem_(static_cast<unsigned char*>(ptr)), bucket_size_((page_size - sizeof(counter_type))/sizeof(value_type)), page_size_(page_size)
     {
         
         // check that the page can contain bucket_size_ elements plus a counter

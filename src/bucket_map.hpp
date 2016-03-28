@@ -146,7 +146,7 @@ public:
      */
     bucket_map(const std::string &path, const size_type setup_size, const hasher& hf = hasher(),
                const key_equal& eql = key_equal())
-    : base_filename_(path), e_count_(0), overflow_count_(0), overflow_map_(), bucket_arrays_(), is_resizing_(false), hf_(hf), eql_(eql)
+    : overflow_map_(), bucket_arrays_(), base_filename_(path), e_count_(0), overflow_count_(0),  is_resizing_(false), hf_(hf), eql_(eql)
     {
 
         // check is there already is a directory at path
