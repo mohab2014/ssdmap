@@ -645,7 +645,7 @@ private:
         auto it_old = b.begin();
         
         for (auto it = b.begin(); it != b.end(); ++it) {
-            if (((it->first) & mask) == 0) { // high order bit of the key is 0
+            if ((hf_(it->first) & mask) == 0) { // high order bit of the key is 0
                 // keep it here
                 *it_old = *it;
                 ++it_old;
@@ -656,7 +656,7 @@ private:
                 
                 if (!success) {
                     // append the pair to the overflow bucket
-                    size_t h = it->first;
+                    size_t h = hf_(it->first);
 
                     append_overflow_bucket(h&((1 << (mask_size_+1))-1), h, *it);
                 }
