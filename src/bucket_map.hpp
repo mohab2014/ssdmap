@@ -840,26 +840,28 @@ private:
         }
 
         // read the overflow bucket
-        std::string overflow_path = base_filename_ + "/overflow.bin";
         
-        if (stat (overflow_path.data(), &buffer) != 0) { // the overflow file is not there
-            throw std::runtime_error("bucket_map constructor: Overflow file does not exist.");
+        if (overflow_count_ > 0) {
+            std::string overflow_path = base_filename_ + "/overflow.bin";
+
+            if (stat (overflow_path.data(), &buffer) != 0) { // the overflow file is not there
+                throw std::runtime_error("bucket_map constructor: Overflow file does not exist.");
+            }
+            
+            mmap_st over_mmap = create_mmap(overflow_path.data(), (meta_ptr->overflow_count)*sizeof(typename overflow_map_type::value_type));
+            
+            typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
+            pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
+            
+            for (size_t i = 0; i < meta_ptr->overflow_count; i++) {
+                append_overflow_bucket(elt_ptr[i].first, elt_ptr[i].second.first, elt_ptr[i].second.second);
+            }
+            
+            
+            // close the overflow mmap
+            close_mmap(over_mmap);
         }
 
-        mmap_st over_mmap = create_mmap(overflow_path.data(), (meta_ptr->overflow_count)*sizeof(typename overflow_map_type::value_type));
-        
-        typedef std::pair<size_t, std::pair<size_t,value_type>> pair_type;
-        pair_type* elt_ptr = (pair_type*) over_mmap.mmap_addr;
-        
-        for (size_t i = 0; i < meta_ptr->overflow_count; i++) {
-            append_overflow_bucket(elt_ptr[i].first, elt_ptr[i].second.first, elt_ptr[i].second.second);
-        }
-        
-        overflow_count_         = meta_ptr->overflow_count;
-
-        // close the overflow mmap
-        close_mmap(over_mmap);
-        
         // close the metadata map
         close_mmap(meta_mmap);
     }
