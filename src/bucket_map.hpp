@@ -617,14 +617,14 @@ private:
     mapped_type& at_overflow_bucket(size_t hkey)
     {
         size_t index = get_overflow_bucket_index(hkey);
-        auto submap = overflow_map_.at(index);
+        auto& submap = overflow_map_.at(index);
         return submap.at(hkey).second;
     }
 
     const mapped_type& at_overflow_bucket(size_t hkey) const
     {
         size_t index = get_overflow_bucket_index(hkey);
-        auto submap = overflow_map_.at(index);
+        auto& submap = overflow_map_.at(index);
         return submap.at(hkey).second;
     }
 

@@ -82,17 +82,6 @@ void correctness_check(const std::string &filename, size_t initial_size, size_t 
                         fail_count++;
                     }
                 }
-                
-                v = bm.at(x.first);
-                if (v != x.second) {
-                    if (stop_fail) {
-                        std::cout << "Correctness check failed\n";
-                        return;
-                    }else{
-                        fail_count++;
-                    }
-                }
-               
             }
         }
     }
@@ -116,20 +105,77 @@ void correctness_check(const std::string &filename, size_t initial_size, size_t 
                     fail_count++;
                 }
             }
-            
-            v = bm.at(x.first);
-            if (v != x.second) {
-                if (stop_fail) {
-                    std::cout << "Correctness check failed\n";
-                    return;
-                }else{
-                    fail_count++;
-                }
-            }
-
             count++;
         }
     }
+    if (fail_count > 0) {
+        std::cout << "Correctness check failed, " << fail_count << "errors\n";
+    }else{
+        std::cout << "Correctness check passed\n\n";
+    }
+}
+
+void access_check(const std::string &filename, size_t initial_size, size_t test_size, bool stop_fail = false)
+{
+    std::cout << "Access check:\n";
+    std::cout << "Initial size: " << initial_size;
+    std::cout << ", test size: " << test_size << std::endl;
+    
+    bucket_map<uint64_t,uint64_t> bm(filename,initial_size); // 700 => 4 buckets
+    std::map<uint64_t, uint64_t> ref_map;
+    
+    std::cout << "Fill the map ..." << std::flush;
+    
+    size_t fail_count = 0;
+    
+    for (size_t i = 0; i < test_size; i++) {
+        uint64_t k = xorshift128();
+        
+        bm.add(k, k);
+        ref_map[k] = k;
+    }
+    
+    std::cout << " done\n";
+    
+    size_t count = 0;
+    
+    for(auto &x : ref_map)
+    {
+        bm.at(x.first) = 2*x.second;
+
+        uint64_t v;
+        bool s = bm.get(x.first, v);
+        
+        if ((!s || v != 2*x.second)) {
+            if (stop_fail) {
+                bm.get(x.first, v);
+                std::cout << "Correctness check failed\n";
+                return;
+            }else{
+                fail_count++;
+            }
+        }
+        
+        count++;
+    }
+    
+//    for(auto &x : ref_map)
+//    {
+//        uint64_t v;
+//        bool s = bm.get(x.first, v);
+//        
+//        if ((!s || v != 2*x.second)) {
+//            if (stop_fail) {
+//                std::cout << "Correctness check failed\n";
+//                return;
+//            }else{
+//                fail_count++;
+//            }
+//        }
+// 
+//        count++;
+//    }
+
     if (fail_count > 0) {
         std::cout << "Correctness check failed, " << fail_count << "errors\n";
     }else{
@@ -236,21 +282,22 @@ int main(int argc, const char * argv[]) {
     
     std::cout << "Pre-cleaning ..." << std::flush;
     
-    clean({"correctness_map.dat", "systematic_correctness_map.dat", "persistency_test.dat"});
+    clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat"});
     
     std::cout << " done\n\n" << std::endl;
     
     
-//    correctness_check("correctness_map.dat", 700, 1<<15, false, false);
-    correctness_check("correctness_map.dat", 700, 1<<20, false, false);
+//    correctness_check("correctness_map.dat", 700, 1<<20, false, false);
     
-    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
+//    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
+
+    access_check("access_test.dat", 5000, 10000,true);
     
-    persistency_check("persistency_test.dat", 1 << 20);
+//    persistency_check("persistency_test.dat", 1 << 20);
     
     std::cout << "Post-cleaning ..." << std::flush;
     
-    clean({"correctness_map.dat", "systematic_correctness_map.dat", "persistency_test.dat"});
+    clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat"});
     
     std::cout << " done" << std::endl;
     
