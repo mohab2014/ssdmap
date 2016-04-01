@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		314D23051CA952E0009D15D0 /* mmap_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A521C9B1AD600B57FF7 /* mmap_util.c */; };
-		314D23061CA952E0009D15D0 /* mmap_util.h in Headers */ = {isa = PBXBuildFile; fileRef = 31D08A531C9B1AD600B57FF7 /* mmap_util.h */; };
-		314D23071CA952E0009D15D0 /* bucket_array.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 3152221F1C9C67810011729F /* bucket_array.hpp */; };
-		314D23081CA952E0009D15D0 /* bucket_map.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 31D68DA21C9F417B008B511D /* bucket_map.hpp */; };
+		314D23061CA952E0009D15D0 /* mmap_util.h in Headers */ = {isa = PBXBuildFile; fileRef = 31D08A531C9B1AD600B57FF7 /* mmap_util.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		314D23071CA952E0009D15D0 /* bucket_array.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 3152221F1C9C67810011729F /* bucket_array.hpp */; settings = {ATTRIBUTES = (Public, ); }; };
+		314D23081CA952E0009D15D0 /* bucket_map.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 31D68DA21C9F417B008B511D /* bucket_map.hpp */; settings = {ATTRIBUTES = (Public, ); }; };
 		314E508A1CA356E200400E6D /* checks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 314E50891CA356E200400E6D /* checks.cpp */; };
 		314E508B1CA3572C00400E6D /* mmap_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A521C9B1AD600B57FF7 /* mmap_util.c */; };
 		31D08A4C1C9B1AC200B57FF7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 31D08A4B1C9B1AC200B57FF7 /* main.cpp */; };
@@ -39,7 +39,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		314D22FA1CA952B9009D15D0 /* liblibssdmap.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblibssdmap.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		314D22FA1CA952B9009D15D0 /* libssdmap.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libssdmap.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		314E50821CA356BE00400E6D /* check */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = check; sourceTree = BUILT_PRODUCTS_DIR; };
 		314E50891CA356E200400E6D /* checks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = checks.cpp; sourceTree = SOURCE_ROOT; };
 		3152221F1C9C67810011729F /* bucket_array.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = bucket_array.hpp; path = src/bucket_array.hpp; sourceTree = SOURCE_ROOT; };
@@ -92,7 +92,7 @@
 			children = (
 				31D08A481C9B1AC200B57FF7 /* ssdmap */,
 				314E50821CA356BE00400E6D /* check */,
-				314D22FA1CA952B9009D15D0 /* liblibssdmap.dylib */,
+				314D22FA1CA952B9009D15D0 /* libssdmap.dylib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -139,7 +139,7 @@
 			);
 			name = libssdmap;
 			productName = libssdmap;
-			productReference = 314D22FA1CA952B9009D15D0 /* liblibssdmap.dylib */;
+			productReference = 314D22FA1CA952B9009D15D0 /* libssdmap.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 		314E50811CA356BE00400E6D /* check */ = {
@@ -250,11 +250,13 @@
 			buildSettings = {
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_PREFIX = "";
 				GCC_ENABLE_CPP_EXCEPTIONS = YES;
 				GCC_ENABLE_CPP_RTTI = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				PRIVATE_HEADERS_FOLDER_PATH = include/ssdmap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PUBLIC_HEADERS_FOLDER_PATH = include/ssdmap;
 			};
 			name = Debug;
 		};
@@ -263,11 +265,13 @@
 			buildSettings = {
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_PREFIX = "";
 				GCC_ENABLE_CPP_EXCEPTIONS = YES;
 				GCC_ENABLE_CPP_RTTI = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				PRIVATE_HEADERS_FOLDER_PATH = include/ssdmap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PUBLIC_HEADERS_FOLDER_PATH = include/ssdmap;
 			};
 			name = Release;
 		};
@@ -388,6 +392,7 @@
 				314D23041CA952B9009D15D0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		314E50861CA356BE00400E6D /* Build configuration list for PBXNativeTarget "check" */ = {
 			isa = XCConfigurationList;
