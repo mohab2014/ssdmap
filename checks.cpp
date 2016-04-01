@@ -83,6 +83,16 @@ void correctness_check(const std::string &filename, size_t initial_size, size_t 
                     }
                 }
                 
+                v = bm.at(x.first);
+                if (v != x.second) {
+                    if (stop_fail) {
+                        std::cout << "Correctness check failed\n";
+                        return;
+                    }else{
+                        fail_count++;
+                    }
+                }
+               
             }
         }
     }
@@ -107,6 +117,16 @@ void correctness_check(const std::string &filename, size_t initial_size, size_t 
                 }
             }
             
+            v = bm.at(x.first);
+            if (v != x.second) {
+                if (stop_fail) {
+                    std::cout << "Correctness check failed\n";
+                    return;
+                }else{
+                    fail_count++;
+                }
+            }
+
             count++;
         }
     }

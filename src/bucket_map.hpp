@@ -269,29 +269,19 @@ public:
         return ((float)overflow_count_)/(e_count_);
     }
     
-    /**
-     *  @brief Access element
-     *
-     * Retrieves the element with key @a key, puts it in @a v and return true if found, and just returns false otherwise.
-     *
-     *  @param[in]  key     Key to be searched for.
-     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
-     *  @param[out] v       A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
-     If @a key is found, the mapped value will be put in @a v.
-     
-     *  @retval true    if @a key was found
-     *  @retval false   if @a key was not found
-     
-     */
-    bool get(key_type key, mapped_type& v)
+    
+    mapped_type& at(key_type key)
     {
         size_t h = hf_(key);
         
         // first, look if it is not in the overflow map
         
-        if (get_overflow_bucket(h, v)) {
-            return true;
-        }
+        try {
+            return at_overflow_bucket(h);
+        } catch (std::out_of_range &e) {
+            
+        
+        
         
         // otherwise, get the bucket index
         
@@ -306,12 +296,73 @@ public:
         for (auto it = bucket.begin(); it != bucket.end(); ++it) {
             if(eql_(it->first, key))
             {
-                v = it->second;
-                return true;
+                return it->second;
             }
         }
         
-        return false;
+        throw std::out_of_range("Key not found");
+
+        }
+
+    }
+
+    const mapped_type& at(key_type key) const
+    {
+        size_t h = hf_(key);
+        
+        // first, look if it is not in the overflow map
+        
+        try {
+            return at_overflow_bucket(h);
+        } catch (std::out_of_range &e) {
+            
+            
+            
+            
+            // otherwise, get the bucket index
+            
+            // get the appropriate coordinates
+            std::pair<uint8_t, size_t> coords = bucket_coordinates(h);
+            
+            // get the bucket and prefetch it
+            auto bucket = get_bucket(coords);
+            //        bucket.prefetch();
+            
+            // scan throught the bucket to find the element
+            for (auto it = bucket.begin(); it != bucket.end(); ++it) {
+                if(eql_(it->first, key))
+                {
+                    return it->second;
+                }
+            }
+            
+            throw std::out_of_range("Key not found");
+            
+        }
+    }
+
+    /**
+     *  @brief Access element
+     *
+     * Retrieves the element with key @a key, puts it in @a v and return true if found, and just returns false otherwise.
+     *
+     *  @param[in]  key     Key to be searched for.
+     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
+     *  @param[out] v       A mapped_type object, defined in bucket_map as an alias of its second template parameter (Value).
+     If @a key is found, the mapped value will be put in @a v.
+     
+     *  @retval true    if @a key was found
+     *  @retval false   if @a key was not found
+     
+     */
+    bool get(key_type key, mapped_type& v) const
+    {
+        try {
+            v = at(key);
+            return true;
+        } catch (std::out_of_range &e) {
+            return false;
+        }
     }
     
     /**
@@ -542,13 +593,41 @@ private:
         
         return bucket_arrays_[ba_index].first.bucket(b_pos);
     }
-
+    
+    inline const bucket_type get_bucket(uint8_t ba_index, size_t b_pos) const
+    {
+        if (ba_index >= bucket_arrays_.size()) {
+            throw std::out_of_range("bucket_map::get_bucket");
+        }
+        
+        return bucket_arrays_[ba_index].first.bucket(b_pos);
+    }
+    
     inline bucket_type get_bucket(const std::pair<uint8_t, size_t> &p)
+    {
+        return get_bucket(p.first, p.second);
+    }
+    
+    inline const bucket_type get_bucket(const std::pair<uint8_t, size_t> &p) const
     {
         return get_bucket(p.first, p.second);
     }
 
     
+    mapped_type& at_overflow_bucket(size_t hkey)
+    {
+        size_t index = get_overflow_bucket_index(hkey);
+        auto submap = overflow_map_.at(index);
+        return submap.at(hkey).second;
+    }
+
+    const mapped_type& at_overflow_bucket(size_t hkey) const
+    {
+        size_t index = get_overflow_bucket_index(hkey);
+        auto submap = overflow_map_.at(index);
+        return submap.at(hkey).second;
+    }
+
     bool get_overflow_bucket(size_t hkey, mapped_type& v) const
     {
         size_t index = get_overflow_bucket_index(hkey);

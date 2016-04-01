@@ -432,7 +432,9 @@ public:
             throw std::out_of_range("bucket_array::bucket");
         }
         
-        return bucket_type(mem_ + (n*page_size()), this);
+        // remove the const qualifier here:
+        // the bucket array should not be modified thanks to the const qualifier of the return value
+        return bucket_type(mem_ + (n*page_size()), const_cast<bucket_array*>(this));
     }
     //@}
     
