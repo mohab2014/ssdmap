@@ -155,8 +155,9 @@ public:
      Member type key_equal is defined in bucket_map as an alias of its fourth template parameter (Pred).
      *
      *  If a valid input directory is given by the constructor, the data structure will be initialized from its content.
-     *  Otherwise, a new structure will be initialized, such that it is able to contain @a setup_size elements.
+     *  Otherwise, a new structure will be initialized, such that it is able to contain @a setup_size elements, and will be stored at @a path.
      *
+     *  @exception std::runtime_error The input path is invalid.
      */
     bucket_map(const std::string &path, const size_type setup_size, const hasher& hf = hasher(),
                const key_equal& eql = key_equal())
@@ -168,7 +169,7 @@ public:
         if(stat (base_filename_.data(), &buffer) == 0) // there is something at path
         {
             if (!S_ISDIR(buffer.st_mode)) {
-                throw std::runtime_error("bucket_map constructor: Invalid path");
+                throw std::runtime_error("bucket_map constructor: Invalid path. " + path + " is not a directory");
             }
             
             init_from_file();
@@ -206,7 +207,41 @@ public:
         }
     }
     
+
+    /**
+     *  @brief Constructor
+     *
+     *  @param path         The path to the directory where the map is stored.
+     *  @param hf           Hasher function object. A hasher is a function that returns an integral value based on the container object key passed to it as argument.
+     Member type hasher is defined in bucket_map as an alias of its third template parameter (Hash).
+     *  @param eql          Comparison function object, that returns true if the two container object keys passed as arguments are to be considered equal.
+     Member type key_equal is defined in bucket_map as an alias of its fourth template parameter (Pred).
+     *
+     *  This constructor initializes the container from the data stored at @a path. If no valid directory is found, an exception is raised.
+     *
+     *  @exception std::runtime_error The input path is invalid.
+     */
+    bucket_map(const std::string &path, const hasher& hf = hasher(),
+               const key_equal& eql = key_equal())
+    : overflow_map_(), bucket_arrays_(), base_filename_(path), e_count_(0), overflow_count_(0),  is_resizing_(false), hf_(hf), eql_(eql)
+    {
+        
+        // check is there already is a directory at path
+        struct stat buffer;
+        if(stat (base_filename_.data(), &buffer) == 0) // there is something at path
+        {
+            if (!S_ISDIR(buffer.st_mode)) {
+                throw std::runtime_error("bucket_map constructor: Invalid path. " + path + " is not a directory");
+            }
+            
+            init_from_file();
+        }else{
+            // throw an error, we were suppose to find a path
+            throw std::runtime_error("bucket_map constructor: " + path + ": no such file or directory");
+        }
+    }
     
+
     /**
      *  @brief Destructor
      *
