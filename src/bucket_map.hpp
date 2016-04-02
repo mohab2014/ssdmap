@@ -304,7 +304,23 @@ public:
         return ((float)overflow_count_)/(e_count_);
     }
     
-    
+    //@{
+    /**
+     *  @brief Access element
+     *
+     *  Returns a reference to the mapped value of the element identified with key @a key.
+     *  If @a key does not match the key of any element in the container, the function throws an out_of_range exception.
+     *
+     *  @param[in]  key     Key value of the element whose mapped value is accessed.
+     Member type key_type is the type of the keys for the elements in the container, defined in bucket_map as an alias of its first template parameter (Key).
+     *
+     *  @return     A reference to the mapped value of the element with a key value equivalent to @a key.
+     *              If the map object is const-qualified, the function returns a reference to const mapped_type. Otherwise, it returns a reference to mapped_type.
+     *              Member type mapped_type is the type to the mapped values in the container, i.e. an alias of its second template parameter (T).
+     *
+     *  @exception std::out_of_range @a key is not the key of an element in the map.
+     */
+
     mapped_type& at(key_type key)
     {
         size_t h = hf_(key);
@@ -375,6 +391,7 @@ public:
             
         }
     }
+    //@}
 
     /**
      *  @brief Access element
