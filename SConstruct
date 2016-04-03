@@ -65,6 +65,7 @@ env.Clean(headers_lib,[library_build_prefix+'/include'])
 Alias('headers', headers_lib)
 Alias('lib', [shared_lib, static_lib] + headers_lib)
 # Alias('lib', [lib_install] + headers_lib)
+Clean('lib', 'library')
 
 
 doc = env.Command('html', [], 'doxygen')
