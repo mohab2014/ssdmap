@@ -265,6 +265,18 @@ public:
         return e_count_;
     }
     
+    /**
+     *  @brief Return the total number of elements that can be holded in the buckets.
+     *
+     *  Returns the sum of the bucket sizes.
+     *
+     *  @return The total number of elements that can be holded in the buckets.
+     */
+    inline size_t bucket_space() const
+    {
+        return bucket_space_;
+    }
+    
     
     /**
      *  @brief Return container load.
