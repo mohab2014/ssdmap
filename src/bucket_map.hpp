@@ -893,7 +893,7 @@ private:
 
         // read the overflow bucket
         
-        if (overflow_count_ > 0) {
+        if (meta_ptr->overflow_count > 0) {
             std::string overflow_path = base_filename_ + "/overflow.bin";
 
             if (stat (overflow_path.data(), &buffer) != 0) { // the overflow file is not there
@@ -908,7 +908,6 @@ private:
             for (size_t i = 0; i < meta_ptr->overflow_count; i++) {
                 append_overflow_bucket(elt_ptr[i].first, elt_ptr[i].second.first, elt_ptr[i].second.second);
             }
-            
             
             // close the overflow mmap
             close_mmap(over_mmap);
