@@ -107,6 +107,7 @@ public:
     
     typedef std::unordered_map<size_t, value_type>                  overflow_submap_type;
     typedef std::unordered_map<size_t, overflow_submap_type>           overflow_map_type;
+    
 private:
     overflow_map_type overflow_map_;
     

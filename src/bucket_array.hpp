@@ -74,12 +74,6 @@ public:
     typedef const T*                          const_pointer;    /**< @brief const value_type*	*/
     typedef size_t                            size_type;        /**< @brief size_t	*/
 
-    typedef value_type*                           iterator;     /**< @brief a forward iterator to value_type	*/
-    typedef const value_type*                     const_iterator; /**< @brief a forward iterator to const value_type	*/
-    typedef std::reverse_iterator<iterator>       reverse_iterator; /**< @brief reverse_iterator<iterator>	*/
-    typedef std::reverse_iterator<const_iterator> const_reverse_iterator; /**< @brief reverse_iterator<const_iterator>	*/
-
-
     typedef C                                 counter_type;     /**< @brief The second template parameter (C)	*/
     typedef C&                                counter_ref;      /**< @brief counter_type&	*/
     typedef const C&                          const_counter_ref;/**< @brief const counter_type&	*/
@@ -97,6 +91,11 @@ public:
     class bucket
     {
     public:
+        typedef value_type*                           iterator;     /**< @brief a forward iterator to value_type	*/
+        typedef const value_type*                     const_iterator; /**< @brief a forward iterator to const value_type	*/
+        typedef std::reverse_iterator<iterator>       reverse_iterator; /**< @brief reverse_iterator<iterator>	*/
+        typedef std::reverse_iterator<const_iterator> const_reverse_iterator; /**< @brief reverse_iterator<const_iterator>	*/
+
         /**
          *  @brief Constructor
          *
@@ -251,6 +250,30 @@ public:
     };
     
     typedef bucket bucket_type; /**< @brief bucket	*/
+
+    class const_iterator
+    {
+    private:
+        const bucket_array  *array_;
+        size_type           bucket_index_;
+        size_type           bucket_size_;
+        size_type           index_;
+        //        value_type          *elt_ptr_;
+        bool                is_at_end_;
+        
+    public:
+        //        const_iterator();
+        //        const_iterator(const const_iterator& it);
+        const_iterator(const bucket_array* a, size_t bi);
+        const_iterator(const bucket_array* a, size_t bi, size_t i);
+        
+        const_iterator& operator++(); //prefix increment
+        const_reference operator*() const;
+        const_iterator operator++(int); //postfix increment
+        const value_type* operator->() const;
+        friend bool operator==(const const_iterator&, const const_iterator&);
+        friend bool operator!=(const const_iterator&, const const_iterator&);
+    };
 
     /**
      *  @brief Return the optimal size of buckets
