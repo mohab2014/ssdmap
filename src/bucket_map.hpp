@@ -39,6 +39,7 @@
 #include <list>
 #include <string>
 #include <sstream>
+#include <random>
 
 #include <cmath>
 #include <cstring>
@@ -458,6 +459,38 @@ public:
     inline const_iterator end() const
     {
         return const_iterator(this, bucket_arrays_.size(), true);
+    }
+    
+    /**
+     *  @brief Returns a random element.
+     *
+     *  Returns a random element of the bucket_map container.
+     *
+     *  @return A random element in the container.
+     */
+   
+    const_reference random_element() const
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, (int)((1<<mask_size_) + resize_counter_-1));
+        size_t rnd;
+        
+        while(true)
+        {
+            rnd = dis(gen);
+
+            auto b = get_bucket(bucket_coordinates(rnd));
+            size_t s = b.size();
+            if(s > 0)
+            {
+                std::uniform_int_distribution<> loc_dis(0, (int)(s-1));
+                size_t c = loc_dis(gen);
+                return *(b.begin()+c);
+            }
+        }
+//        auto pos_pair = bucket_coordinates(rnd);
+//        get_bucket(pos_pair.first, pos_pair.second);
     }
     
     /**
