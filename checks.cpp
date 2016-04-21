@@ -260,6 +260,49 @@ rm( const char *path, const struct stat *s, int flag, struct FTW *f )
     return status;
 }
 
+void iterator_check(const std::string &filename, size_t initial_size, size_t test_size)
+{
+    std::cout << "Iterator check:\n";
+    std::cout << "Initial size: " << initial_size;
+    std::cout << ", test size: " << test_size << std::endl;
+    
+    bucket_map<uint64_t,uint64_t> bm(filename,initial_size); // 700 => 4 buckets
+    std::map<uint64_t, uint64_t> ref_map;
+    
+    std::cout << "Fill the map ..." << std::flush;
+    
+    size_t fail_count = 0;
+    
+    for (size_t i = 0; i < test_size; i++) {
+        uint64_t k = i;
+        
+        bm.add(k, k);
+        ref_map[k] = k;
+    }
+    
+    std::cout << " done\n";
+    
+    
+    size_t c = 0;
+    for (auto it = bm.begin(); it != bm.end() ; ++it, c++) {
+        ref_map.erase((*it).first);
+//        std::cout << "c = " << c << std::endl;
+//        std::cout << "(" << (*it).first << ", " << (*it).second << ")" << std::endl;
+
+        if (c == test_size-1) {
+            std::cout << "Last" << std::endl;
+        }
+    }
+    
+    std::cout << "\rc = " << c << std::endl;
+
+    if (ref_map.size() > 0) {
+        std::cout << "Iterator check failed, " << fail_count << "errors\n";
+    }else{
+        std::cout << "Iterator check passed\n\n";
+    }
+}
+
 void clean(const std::list<std::string> &file_list)
 {
     for (auto &fn : file_list) {
@@ -281,8 +324,8 @@ int main(int argc, const char * argv[]) {
 //    std::cout << "w = " << w << std::endl;
     
     std::cout << "Pre-cleaning ..." << std::flush;
-    
-    clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat"});
+
+    clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat", "it_test.dat"});
     
     std::cout << " done\n\n" << std::endl;
     
@@ -291,10 +334,12 @@ int main(int argc, const char * argv[]) {
     
 //    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
 
-    access_check("access_test.dat", 5000, 10000,true);
+//    access_check("access_test.dat", 5000, 10000,true);
     
 //    persistency_check("persistency_test.dat", 1 << 20);
-    
+
+    iterator_check("it_test.dat", 100, 1000);
+
     std::cout << "Post-cleaning ..." << std::flush;
     
     clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat"});
@@ -303,3 +348,4 @@ int main(int argc, const char * argv[]) {
     
     return 0;
 }
+

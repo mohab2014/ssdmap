@@ -254,25 +254,119 @@ public:
     class const_iterator
     {
     private:
-        const bucket_array  *array_;
-        size_type           bucket_index_;
-        size_type           bucket_size_;
-        size_type           index_;
+        const bucket_array          *array_;
+        size_type                   index_;
+
+        typename bucket::const_iterator      bucket_it_;
         //        value_type          *elt_ptr_;
-        bool                is_at_end_;
+        
+        typedef     std::forward_iterator_tag   iterator_category;
+        
+        void increment()
+        {
+            bucket_it_++;
+            
+            reach_next();
+            
+        }
         
     public:
-        //        const_iterator();
+        const_iterator()
+        : array_(NULL), index_(0), bucket_it_(NULL)
+        {}
         //        const_iterator(const const_iterator& it);
-        const_iterator(const bucket_array* a, size_t bi);
-        const_iterator(const bucket_array* a, size_t bi, size_t i);
+        const_iterator(const bucket_array* a, size_t bi)
+        : array_(a), index_(bi)
+        {
+            if(bi < array_->bucket_count())
+            {
+                bucket_it_ = array_->bucket(bi).begin();
+            }else{
+                bucket_it_ = NULL;
+            }
+        }
+        const_iterator(const bucket_array* a, size_t bi, size_t i)
+        : array_(a), index_(bi)
+        {
+            if(bi < array_->bucket_count())
+            {
+                bucket_it_ = array_->bucket(bi).begin() + i;
+            }else{
+                bucket_it_ = NULL;
+            }
+        }
         
-        const_iterator& operator++(); //prefix increment
-        const_reference operator*() const;
-        const_iterator operator++(int); //postfix increment
-        const value_type* operator->() const;
-        friend bool operator==(const const_iterator&, const const_iterator&);
-        friend bool operator!=(const const_iterator&, const const_iterator&);
+        
+        const_iterator& operator++() //prefix increment
+        {
+            increment();
+            
+            return (*this);
+        }
+        const_reference operator*() const
+        {
+            return *bucket_it_;
+        }
+        
+        const_iterator operator++(int) //postfix increment
+        {
+            const_iterator cpy(*this);
+            
+            increment();
+            
+            return cpy;
+        }
+        
+        const value_type* get_ptr() const
+        {
+            return bucket_it_;
+        }
+        
+        const value_type* operator->() const
+        {
+            return get_ptr();
+        }
+        
+        const_iterator& reach_next()
+        {
+            if (bucket_it_ == array_->bucket(index_).end()) {
+                index_++;
+                
+                while(index_ < array_->bucket_count())
+                {
+                    bucket_it_ = array_->bucket(index_).begin();
+                    
+                    if (bucket_it_ == array_->bucket(index_).end()) {
+                        index_++;
+                    }else{
+                        break;
+                    }
+                }
+            
+            }
+            return (*this);
+        }
+        
+
+        friend bool operator==(const const_iterator& a, const const_iterator& b)
+        {
+            if(a.array_ != b.array_)
+                return false;
+            
+            if (a.index_ != b.index_) {
+                return false;
+            }
+            
+            if (a.index_ == a.array_->bucket_count()) // we are at the end
+                return true;
+            
+            
+            return (a.bucket_it_ == b.bucket_it_);
+        }
+        friend bool operator!=(const const_iterator& a, const const_iterator& b)
+        {
+            return !(a == b);
+        }
     };
 
     /**
@@ -478,6 +572,16 @@ public:
         {
             printf("Bad advice ...\n");
         }
+    }
+    
+    const_iterator begin() const
+    {
+        return const_iterator(this, 0).reach_next();
+    }
+
+    const_iterator end() const
+    {
+        return const_iterator(this, bucket_count());
     }
 
     

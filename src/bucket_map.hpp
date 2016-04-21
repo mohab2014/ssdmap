@@ -145,6 +145,167 @@ private:
 
 public:
     
+    class const_iterator
+    {
+    private:
+        const bucket_map          *map_;
+        size_type                 array_index_;
+        
+        typename bucket_array_type::const_iterator      ba_it_;
+        
+        typedef     std::forward_iterator_tag   iterator_category;
+        
+        bool is_iterating_overflow_map_;
+        typename overflow_map_type::const_iterator      om_it_;
+        typename overflow_submap_type::const_iterator   sub_om_it_;
+        
+        void increment()
+        {
+            if (is_iterating_overflow_map_) {
+                
+                if(sub_om_it_ != om_it_->second.end()){
+                    sub_om_it_++;
+                }else{
+                    return;
+                }
+                
+                if(sub_om_it_ == om_it_->second.end())
+                {
+                    om_it_++;
+                    if (om_it_ != map_->overflow_map_.end()) {
+                        sub_om_it_ = om_it_->second.begin();
+                    }
+                }
+            }else{
+                ba_it_++;
+                
+                reach_next();
+            }
+        }
+        
+    public:
+        const_iterator(const bucket_map* m, size_t ai)
+        : map_(m), array_index_(ai), is_iterating_overflow_map_(false)
+        {
+            if(ai < map_->arrays_count())
+            {
+                ba_it_ = map_->bucket_array(ai).begin();
+            }
+        }
+
+        const_iterator(const bucket_map* m, size_t ai, bool point_end)
+        : map_(m), array_index_(ai), is_iterating_overflow_map_(false)
+        {
+            if(point_end)
+            {
+                is_iterating_overflow_map_ = true;
+                om_it_ = map_->overflow_map_.end();
+            }else{
+                if(ai < map_->arrays_count())
+                {
+                    ba_it_ = map_->bucket_array(ai).begin();
+                }
+            }
+        }
+
+        const_iterator& operator++() //prefix increment
+        {
+            increment();
+            
+            return (*this);
+        }
+        const_reference operator*() const
+        {
+            if(is_iterating_overflow_map_)
+                return sub_om_it_->second;
+            
+            return *ba_it_;
+        }
+        
+        const_iterator operator++(int) //postfix increment
+        {
+            const_iterator cpy(*this);
+            
+            increment();
+            
+            return cpy;
+        }
+        
+//        const value_type* operator->() const
+//        {
+//            return ba_it_.get_ptr();
+//        }
+        
+        const_iterator& reach_next()
+        {
+            if (ba_it_ == map_->bucket_array(array_index_).end()) {
+                array_index_++;
+                
+                while(array_index_ < map_->arrays_count())
+                {
+                    ba_it_ = map_->bucket_array(array_index_).begin();
+                    
+                    if (ba_it_ == map_->bucket_array(array_index_).end()) {
+                        array_index_++;
+                    }else{
+                        break;
+                    }
+                }
+                
+                if (array_index_ == map_->arrays_count())
+                {
+                    is_iterating_overflow_map_ = true;
+                    om_it_ = map_->overflow_map_.begin();
+                    if (om_it_ != map_->overflow_map_.end()) {
+                        sub_om_it_ = om_it_->second.begin();
+                    }
+                }
+
+            }
+            return (*this);
+        }
+        
+        friend bool operator==(const const_iterator& a, const const_iterator& b)
+        {
+            if(a.map_ != b.map_)
+                return false;
+            
+            if (a.is_iterating_overflow_map_ != b.is_iterating_overflow_map_) {
+                return false;
+            }
+            
+            if (a.is_iterating_overflow_map_ == true)
+            {
+                if (a.om_it_ != b.om_it_)
+                {
+                    return false;
+                }
+                if (a.om_it_ == a.map_->overflow_map_.end()) {
+                    return true;
+                }
+                    
+                    
+                return (a.sub_om_it_ == b.sub_om_it_);
+            }
+            
+            if (a.array_index_ != b.array_index_) {
+                return false;
+            }
+            
+            if (a.array_index_ == a.map_->arrays_count()) // we are at the end
+                return true;
+            
+
+            return (a.ba_it_ == b.ba_it_);
+        }
+        friend bool operator!=(const const_iterator& a, const const_iterator& b)
+        {
+            return !(a == b);
+        }
+    };
+    
+    friend const_iterator;
+    
     /** 
      *  @brief Constructor
      *
@@ -264,6 +425,17 @@ public:
     inline size_t size() const
     {
         return e_count_;
+    }
+    
+    
+    inline const_iterator begin() const
+    {
+        return const_iterator(this, 0).reach_next();
+    }
+    
+    inline const_iterator end() const
+    {
+        return const_iterator(this, bucket_arrays_.size(), true);
     }
     
     /**
@@ -930,6 +1102,15 @@ private:
         close_mmap(meta_mmap);
     }
     
+    const bucket_array_type& bucket_array(size_t i) const
+    {
+        return bucket_arrays_[i].first;
+    }
+    
+    size_t arrays_count() const
+    {
+        return bucket_arrays_.size();
+    }
 };
 
 } // namespace ssdmap
