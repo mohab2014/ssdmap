@@ -225,7 +225,7 @@ public:
             }
 
             value_type *ptr = reinterpret_cast<pointer>(addr_) + size();
-            *ptr = v;
+            memcpy(ptr, &v, sizeof(value_type));
             *c_ptr = (*c_ptr) + 1;
 
             return true;
@@ -251,7 +251,7 @@ public:
     
     typedef bucket bucket_type; /**< @brief bucket	*/
 
-    class const_iterator
+    class const_iterator /**< @brief Forward iterator over the bucket map	*/
     {
     private:
         const bucket_array          *array_;
@@ -303,6 +303,7 @@ public:
             
             return (*this);
         }
+        
         const_reference operator*() const
         {
             return *bucket_it_;
@@ -574,11 +575,25 @@ public:
         }
     }
     
+    /**
+     *  @brief Returns iterator to beginning.
+     *
+     *  Returns an iterator pointing to first element in the bucket_array container.
+     *
+     *  @return An iterator to the first element in the container.
+     */
     const_iterator begin() const
     {
         return const_iterator(this, 0).reach_next();
     }
 
+    /**
+     *  @brief Returns iterator to end.
+     *
+     *  Returns an iterator pointing to past-the-end element in the bucket_array container.
+     *
+     *  @return An iterator to the element past-the-end element in the container.
+     */
     const_iterator end() const
     {
         return const_iterator(this, bucket_count());

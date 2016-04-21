@@ -283,19 +283,11 @@ void iterator_check(const std::string &filename, size_t initial_size, size_t tes
     std::cout << " done\n";
     
     
-    size_t c = 0;
-    for (auto it = bm.begin(); it != bm.end() ; ++it, c++) {
-        ref_map.erase((*it).first);
-//        std::cout << "c = " << c << std::endl;
-//        std::cout << "(" << (*it).first << ", " << (*it).second << ")" << std::endl;
-
-        if (c == test_size-1) {
-            std::cout << "Last" << std::endl;
-        }
+    for (auto it = bm.begin(); it != bm.end() ; ++it) {
+//        ref_map.erase((*it).first);
+        ref_map.erase(it->first);
     }
     
-    std::cout << "\rc = " << c << std::endl;
-
     if (ref_map.size() > 0) {
         std::cout << "Iterator check failed, " << fail_count << "errors\n";
     }else{
@@ -330,19 +322,19 @@ int main(int argc, const char * argv[]) {
     std::cout << " done\n\n" << std::endl;
     
     
-//    correctness_check("correctness_map.dat", 700, 1<<20, false, false);
+    correctness_check("correctness_map.dat", 700, 1<<20, false, false);
     
-//    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
+    correctness_check("systematic_correctness_map.dat", 700, 1<<14, true, true);
 
-//    access_check("access_test.dat", 5000, 10000,true);
+    access_check("access_test.dat", 5000, 10000,true);
     
-//    persistency_check("persistency_test.dat", 1 << 20);
+    persistency_check("persistency_test.dat", 1 << 20);
 
-    iterator_check("it_test.dat", 100, 1000);
+    iterator_check("it_test.dat", 100, 100000);
 
     std::cout << "Post-cleaning ..." << std::flush;
     
-    clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat"});
+    clean({"correctness_map.dat", "systematic_correctness_map.dat", "access_test.dat", "persistency_test.dat", "it_test.dat"});
     
     std::cout << " done" << std::endl;
     

@@ -101,7 +101,7 @@ public:
     typedef ptrdiff_t       difference_type;
     
     
-    typedef std::pair<key_type, mapped_type>                        bucket_value_type;
+    typedef std::pair<const key_type, mapped_type>                        bucket_value_type;
     typedef bucket_array<bucket_value_type>                         bucket_array_type;
     typedef typename bucket_array_type::bucket_type                 bucket_type;
     
@@ -145,7 +145,7 @@ private:
 
 public:
     
-    class const_iterator
+    class const_iterator /**< @brief Constant iterator over the map's elements */
     {
     private:
         const bucket_map          *map_;
@@ -214,13 +214,6 @@ public:
             
             return (*this);
         }
-        const_reference operator*() const
-        {
-            if(is_iterating_overflow_map_)
-                return sub_om_it_->second;
-            
-            return *ba_it_;
-        }
         
         const_iterator operator++(int) //postfix increment
         {
@@ -231,10 +224,26 @@ public:
             return cpy;
         }
         
-//        const value_type* operator->() const
-//        {
-//            return ba_it_.get_ptr();
-//        }
+        const_reference operator*() const
+        {
+            if(is_iterating_overflow_map_)
+                return sub_om_it_->second;
+            
+            return ba_it_.operator*();
+        }
+
+        const value_type* operator->() const
+        {
+            if(is_iterating_overflow_map_)
+                return &(sub_om_it_->second);
+            
+            return ba_it_.operator->();
+        }
+
+        // no operator->():
+        // it is not possible to cast a reference/pointer to pair<Key, Value> into pair<const Key, Value>
+        // the only possible solution would be to create temporary objects, and this is bad ...
+        // also, in bucket_array, it is not possible to use pair<const Key, Value> as the value type without using non trivial hacks
         
         const_iterator& reach_next()
         {
@@ -427,12 +436,25 @@ public:
         return e_count_;
     }
     
-    
+    /**
+     *  @brief Returns iterator to beginning.
+     *
+     *  Returns an iterator pointing to first element in the bucket_map container.
+     *
+     *  @return An iterator to the first element in the container.
+     */
     inline const_iterator begin() const
     {
         return const_iterator(this, 0).reach_next();
     }
     
+    /**
+     *  @brief Returns iterator to end.
+     *
+     *  Returns an iterator pointing to past-the-end element in the bucket_map container.
+     *
+     *  @return An iterator to the element past-the-end element in the container.
+     */
     inline const_iterator end() const
     {
         return const_iterator(this, bucket_arrays_.size(), true);
@@ -963,7 +985,7 @@ private:
         for (auto it = b.begin(); it != b.end(); ++it) {
             if ((hf_(it->first) & mask) == 0) { // high order bit of the key is 0
                 // keep it here
-                *it_old = *it;
+                memcpy(it_old, it, sizeof(value_type));
                 ++it_old;
                 c_old++;
             }else{
