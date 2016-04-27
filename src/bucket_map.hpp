@@ -190,7 +190,7 @@ public:
         {
             if(ai < map_->arrays_count())
             {
-                ba_it_ = map_->bucket_array(ai).begin();
+                ba_it_ = map_->get_bucket_array(ai).begin();
             }
         }
 
@@ -204,7 +204,7 @@ public:
             }else{
                 if(ai < map_->arrays_count())
                 {
-                    ba_it_ = map_->bucket_array(ai).begin();
+                    ba_it_ = map_->get_bucket_array(ai).begin();
                 }
             }
         }
@@ -248,14 +248,14 @@ public:
         
         const_iterator& reach_next()
         {
-            if (ba_it_ == map_->bucket_array(array_index_).end()) {
+            if (ba_it_ == map_->get_bucket_array(array_index_).end()) {
                 array_index_++;
                 
                 while(array_index_ < map_->arrays_count())
                 {
-                    ba_it_ = map_->bucket_array(array_index_).begin();
+                    ba_it_ = map_->get_bucket_array(array_index_).begin();
                     
-                    if (ba_it_ == map_->bucket_array(array_index_).end()) {
+                    if (ba_it_ == map_->get_bucket_array(array_index_).end()) {
                         array_index_++;
                     }else{
                         break;
@@ -290,7 +290,7 @@ public:
                 {
                     return false;
                 }
-                if (a.om_it_ == a.map_->overflow_map_.end()) {
+                if (a.om_it_ == a.map_->get_overflow_map().end()) {
                     return true;
                 }
                     
@@ -821,6 +821,23 @@ public:
         }
     }
 
+    /**
+     *  @brief   Return the overflow map.
+     *
+     *  Getter of the overflow map.
+     *
+     *  @return A const reference to the overflow map.
+     */
+    const overflow_map_type& get_overflow_map() const
+    {
+        return overflow_map_;
+    }
+    
+    size_t arrays_count() const
+    {
+        return bucket_arrays_.size();
+    }
+
 private:
     inline std::pair<uint8_t, size_t> bucket_coordinates(size_t h) const
     {
@@ -1157,15 +1174,11 @@ private:
         close_mmap(meta_mmap);
     }
     
-    const bucket_array_type& bucket_array(size_t i) const
+    const bucket_array_type& get_bucket_array(size_t i) const
     {
         return bucket_arrays_[i].first;
     }
     
-    size_t arrays_count() const
-    {
-        return bucket_arrays_.size();
-    }
 };
 
 } // namespace ssdmap
