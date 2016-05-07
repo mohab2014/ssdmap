@@ -49,8 +49,8 @@
 namespace ssdmap {
     
    
-constexpr float kBucketMapResizeThresholdLoad = 0.85; /**< @brief Maximum load of the map. */
-constexpr size_t kBucketMapResizeMaxOverflowSize = 1e5; /**< @brief Maximum size of the overflow bucket. */
+constexpr float kBucketMapResizeThresholdLoad = 0.95; /**< @brief Maximum load of the map. */
+constexpr size_t kBucketMapResizeMaxOverflowSize = 5e5; /**< @brief Maximum size of the overflow bucket. */
 constexpr float kBucketMapResizeMaxOverflowRatio = 0.1; /**< @brief Maximum value of the ratio between the size of the overflow bucket and the size of the map. */
 constexpr size_t kBucketMapResizeStepIterations = 4; /**< @brief Number of buckets rebuilt at every insertion during the rebuild phase.  */
 
@@ -353,7 +353,7 @@ public:
             
             
             size_t b_size = bucket_array_type::optimal_bucket_size(kPageSize);
-            float target_load = 0.75;
+            float target_load = 0.90;
             size_t N;
             
             if(target_load*b_size >= setup_size)
