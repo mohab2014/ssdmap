@@ -109,12 +109,30 @@ int flush_mmap(mmap_st map, flush_flag sync_flag)
 int close_mmap(mmap_st map)
 {
     int ret = 0;
-    if (munmap(map.mmap_addr, map.length) == -1) {
-        perror("Error un-mmapping the file");
-        ret = -1;
-        /* Decide here whether to close(fd) and exit() or not. Depends... */
+    size_t offset = 0;
+    size_t step = 1 << 30; // 1 GB step
+    
+    for (; offset < map.length; offset += step) {
+        if (map.length - offset >= step) {
+            if (munmap(map.mmap_addr+offset, step) == -1) {
+                perror("Error un-mmapping the file");
+                ret = -1;
+                /* Decide here whether to close(fd) and exit() or not. Depends... */
+            }
+        }else{
+            if (munmap(map.mmap_addr+offset, map.length - offset) == -1) {
+                perror("Error un-mmapping the file");
+                ret = -1;
+                /* Decide here whether to close(fd) and exit() or not. Depends... */
+            }
+        }
     }
-
+//    if (munmap(map.mmap_addr, map.length) == -1) {
+//        perror("Error un-mmapping the file");
+//        ret = -1;
+//        /* Decide here whether to close(fd) and exit() or not. Depends... */
+//    }
+//
     // close the file descriptor
     ret += close(map.fd);
     
